@@ -1021,7 +1021,10 @@
         active.add(id);
         upsertEntity(id, "drone", d.x, d.y, d.id || "UAV-1", "drone");
         const el = entityEls.get(id);
-        if (el && d.heading != null) el.dataset.heading = d.heading;
+        if (el) {
+          if (d.heading != null) el.dataset.heading = d.heading;
+          el.classList.toggle("recon-drone", !!d.recon);
+        }
       }
       for (const t of state.targets) {
         const id = `target-${t.id}`;
@@ -1149,6 +1152,7 @@
       pb.localizeLogged = false;
       pb.holdLogged     = false;
       pb.introShown     = false;
+      pb.reconDrone     = null;
       state.targets     = [];
       state.cloud       = [];
       state.cloudAlpha  = 0;
@@ -1232,6 +1236,23 @@
           const act = e.recommended_action || "HOLD";
           const fa  = cur.meta.falseAlarm;
 
+          // Pick the nearest drone to the target as the recon responder
+          if (!fa && act === "RECON") {
+            const tgt = state.targets[0];
+            let closest = state.drones[0];
+            let bestDist = Infinity;
+            for (const d of state.drones) {
+              const dist = Math.hypot(d.x - tgt.x, d.y - tgt.y);
+              if (dist < bestDist) { bestDist = dist; closest = d; }
+            }
+            pb.reconDrone = {
+              id: closest.id,
+              fromX: closest.x, fromY: closest.y,
+              toX: tgt.x, toY: tgt.y,
+              t: 0
+            };
+          }
+
           // Apply visual styling to the target entity
           setTimeout(() => {
             const tId = `target-${cur.target.id}`;
@@ -1263,6 +1284,23 @@
 
         if (Math.random() < 0.015)
           emitPulse(state.targets[0].x, state.targets[0].y, "rgba(232, 92, 74, 0.25)");
+
+        // Animate recon drone flying toward the target
+        if (pb.reconDrone) {
+          const rd = pb.reconDrone;
+          rd.t = Math.min(1, rd.t + dt / 5500);
+          const et = easeInOut(rd.t);
+          const rx = lerp(rd.fromX, rd.toX, et);
+          const ry = lerp(rd.fromY, rd.toY, et);
+          const hdg = headingDeg({ x: rd.fromX, y: rd.fromY }, { x: rd.toX, y: rd.toY });
+          state.drones = state.drones.map((d) =>
+            d.id === rd.id
+              ? { ...d, x: rx, y: ry, heading: hdg, recon: true }
+              : d
+          );
+          if (rd.t < 1 && Math.random() < 0.035)
+            emitPulse(rx, ry, "rgba(232,168,56,0.4)");
+        }
         // hold never auto-advances — waits for btnNext click
       }
 
@@ -1281,7 +1319,8 @@
         index: 0, prevIndex: n - 1,
         phase: "transit", phaseT: 0,
         paused: false, missionMs: 0,
-        localizeLogged: false, holdLogged: false, introShown: false
+        localizeLogged: false, holdLogged: false, introShown: false,
+        reconDrone: null
       };
       state.cloudAlpha = 0;
       state.targets    = [];
