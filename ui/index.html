@@ -282,6 +282,16 @@
     }
     .entity.hostile.recon-scanning .label { color: var(--warn); }
 
+    /* ── Recon responder drone (amber) ───────────────────────── */
+    @keyframes recon-drone-fly {
+      0%,100% { filter: hue-rotate(-105deg) saturate(1.5) drop-shadow(0 0 5px rgba(232,168,56,0.55)); }
+      50%     { filter: hue-rotate(-105deg) saturate(1.5) drop-shadow(0 0 13px rgba(232,168,56,1.0)); }
+    }
+    .entity.drone.recon-drone svg {
+      animation: recon-drone-fly 1.1s ease-in-out infinite;
+    }
+    .entity.drone.recon-drone .label { color: var(--warn); }
+
     .entity.hostile.false-alarm-marker svg {
       animation: false-alarm-pulse 2s ease-in-out infinite;
     }
@@ -752,7 +762,8 @@
         missionMs: 0,
         localizeLogged: false,
         holdLogged: false,
-        introShown: false
+        introShown: false,
+        reconDrone: null
       },
       ws: null,
       pingCount: 0,
