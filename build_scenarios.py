@@ -1,12 +1,15 @@
 """
-Genera e salva i 3 scenari UAV in data/scenarios/.
+Genera scenari UAV in data/scenarios/.
 
-Ogni scenario = drone + foresta (background) + un evento (tank | gunshot | missile_launch).
+Militari: drone + foresta + tank | gunshot | missile_launch
+Ambient:  drone + foresta + animale (uccelli, grilli, …) → test “nessun allarme”
 
 Uso:
   conda activate audio_env
   python build_scenarios.py
-  python build_scenarios.py --duration 20
+  python build_scenarios.py --animals
+  python build_scenarios.py --all
+  python prepare_negative_samples.py   # prima degli scenari animali
 """
 
 from __future__ import annotations
@@ -207,7 +210,39 @@ class ScenarioSpec:
     pre_wav: str
 
 
-ALL_SCENARIOS = (
+def pick_esc50_clip(category: str) -> Path | None:
+    meta = DATA_DIR / "ESC-50/meta/esc50.csv"
+    audio_dir = DATA_DIR / "ESC-50/audio"
+    if not meta.exists():
+        return None
+    with meta.open(newline="") as f:
+        for row in csv.DictReader(f):
+            if row["category"] == category:
+                p = audio_dir / row["filename"]
+                if p.exists():
+                    return p
+    return None
+
+
+def pick_animal_clip(category: str) -> Path:
+    neg = SAMPLES / "negative" / category
+    if neg.is_dir():
+        files = sorted(
+            p for p in neg.iterdir()
+            if p.suffix.lower() in (".wav", ".flac", ".mp3", ".ogg")
+            and not p.name.startswith("._")
+        )
+        if files:
+            return files[0]
+    p = pick_esc50_clip(category)
+    if p:
+        return p
+    raise FileNotFoundError(
+        f"Nessun clip '{category}': esegui python prepare_negative_samples.py"
+    )
+
+
+MILITARY_SCENARIOS = (
     ScenarioSpec(
         "tank",
         "tank",
@@ -237,6 +272,43 @@ ALL_SCENARIOS = (
     ),
 )
 
+# Fauna nel mix UAV: detect_audio deve restituire “non rilevante” (nessuna classe militare)
+ANIMAL_SCENARIOS = (
+    ScenarioSpec(
+        "bird",
+        "ambient",
+        Path(),  # risolto a build-time
+        -3.0,
+        False,
+        "scenario_bird_mix.wav",
+        "scenario_bird_preprocessed.wav",
+    ),
+    ScenarioSpec(
+        "crickets",
+        "ambient",
+        Path(),
+        -10.0,
+        True,
+        "scenario_crickets_mix.wav",
+        "scenario_crickets_preprocessed.wav",
+    ),
+    ScenarioSpec(
+        "dog",
+        "ambient",
+        Path(),
+        0.0,
+        False,
+        "scenario_dog_mix.wav",
+        "scenario_dog_preprocessed.wav",
+    ),
+)
+
+ANIMAL_EVENT_SOURCES = {
+    "bird": "chirping_birds",
+    "crickets": "crickets",
+    "dog": "dog",
+}
+
 
 def build_scenario(spec: ScenarioSpec, forest: Path | None, duration: float) -> tuple[Path, Path]:
     if not spec.event_path.exists():
@@ -257,6 +329,7 @@ def build_scenario(spec: ScenarioSpec, forest: Path | None, duration: float) -> 
     if spec.target == "tank":
         pre = preprocess_uav_listen(mix, sr, drone_ref)
     else:
+        # gunshot, missile, fauna: notch + sottrazione drone (no band-pass carro)
         pre = preprocess_for_impulsive(mix, sr, drone_ref)
 
     SCENARIO_DIR.mkdir(parents=True, exist_ok=True)
@@ -267,28 +340,69 @@ def build_scenario(spec: ScenarioSpec, forest: Path | None, duration: float) -> 
     return mix_p, pre_p
 
 
-def build_all(duration: float = DURATION_S) -> list[Path]:
-    forest = find_forest_ambience()
-    print("=== Build scenari → data/scenarios/ ===")
-    print(f"  drone:      {DRONE_PATH.name}")
-    print(f"  background: {forest.name if forest else '(nessuno)'}\n")
-
-    written = []
-    for spec in ALL_SCENARIOS:
-        mix_p, pre_p = build_scenario(spec, forest, duration)
+def _build_specs(specs: tuple[ScenarioSpec, ...], forest: Path | None, duration: float) -> list[Path]:
+    written: list[Path] = []
+    for spec in specs:
+        event = spec.event_path
+        if not event.exists():
+            cat = ANIMAL_EVENT_SOURCES.get(spec.id)
+            if cat:
+                event = pick_animal_clip(cat)
+            else:
+                raise FileNotFoundError(f"Evento mancante: {spec.event_path}")
+        resolved = ScenarioSpec(
+            spec.id, spec.target, event, spec.event_snr_db,
+            spec.loop_event, spec.mix_wav, spec.pre_wav,
+        )
+        mix_p, pre_p = build_scenario(resolved, forest, duration)
         written.extend([mix_p, pre_p])
-        print(f"  [{spec.id}] {spec.event_path.name} (SNR {spec.event_snr_db:+.0f} dB)")
+        print(f"  [{spec.id}] {event.name} (SNR {spec.event_snr_db:+.0f} dB)")
         print(f"    {mix_p.name}")
         print(f"    {pre_p.name}")
+    return written
+
+
+def build_military(duration: float = DURATION_S) -> list[Path]:
+    forest = find_forest_ambience()
+    print("=== Scenari militari → data/scenarios/ ===")
+    print(f"  drone:      {DRONE_PATH.name}")
+    print(f"  background: {forest.name if forest else '(nessuno)'}\n")
+    return _build_specs(MILITARY_SCENARIOS, forest, duration)
+
+
+def build_animals(duration: float = DURATION_S) -> list[Path]:
+    forest = find_forest_ambience()
+    print("=== Scenari fauna (non rilevanti) → data/scenarios/ ===")
+    print(f"  drone:      {DRONE_PATH.name}")
+    print(f"  background: {forest.name if forest else '(nessuno)'}\n")
+    return _build_specs(ANIMAL_SCENARIOS, forest, duration)
+
+
+def build_all(duration: float = DURATION_S, *, military: bool = True, animals: bool = False) -> list[Path]:
+    written: list[Path] = []
+    if military:
+        written.extend(build_military(duration))
+        if animals:
+            print()
+    if animals:
+        written.extend(build_animals(duration))
     print(f"\n  Salvati {len(written)} file in {SCENARIO_DIR}/")
     return written
 
 
 def main():
-    p = argparse.ArgumentParser(description="Genera 3 scenari UAV (drone + foresta + evento)")
+    p = argparse.ArgumentParser(description="Genera scenari UAV (drone + foresta + evento)")
     p.add_argument("--duration", type=float, default=DURATION_S, help="durata mix in secondi")
+    p.add_argument("--animals", action="store_true", help="solo fauna (bird, crickets, dog)")
+    p.add_argument("--all", action="store_true", help="militari + fauna")
     args = p.parse_args()
-    build_all(args.duration)
+
+    if args.all:
+        build_all(args.duration, military=True, animals=True)
+    elif args.animals:
+        build_all(args.duration, military=False, animals=True)
+    else:
+        build_all(args.duration, military=True, animals=False)
 
 
 if __name__ == "__main__":
