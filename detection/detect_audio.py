@@ -1,14 +1,13 @@
 """
-Classifica un file audio in una delle 4 categorie:
+Classify audio into military categories (or not relevant):
   gunshot | missile_launch | drone | tank
 
-Uso:
+Usage (from repo root):
   conda activate audio_env
-  python detect_audio.py data/scenarios/scenario_tank_mix.wav
-  python detect_audio.py --folder data/scenarios
-  python detect_audio.py --folder data/scenarios --json
-  python detect_audio.py --folder data/scenarios -o data/scenarios/detections.json
-  python detect_audio.py --benchmark   # test DCASE / ESC-50 / samples
+  python detection/detect_audio.py data/scenarios/scenario_tank_mix.wav
+  python detection/detect_audio.py --folder data/scenarios
+  python detection/detect_audio.py --folder data/scenarios -o output/events.json
+  python detection/detect_audio.py --benchmark
 """
 
 from __future__ import annotations
@@ -29,16 +28,26 @@ WINDOW_SIZE = 0.5
 HOP_SIZE = 0.25
 SR = 22050
 
-DATA_DIR = Path(__file__).resolve().parent / "data"
+REPO_ROOT = Path(__file__).resolve().parent.parent
+DATA_DIR = REPO_ROOT / "data"
 SAMPLES_DIR = DATA_DIR / "samples"
+DRONE_REF_PATH = SAMPLES_DIR / "drone" / "uas_drone_pass_dcpoke.wav"
+
+# Below this ratio, “tank” is often rotor + forest only (no real tank in the mix)
+TANK_COMPARATIVE_MIN_RATIO = 1.05
+TANK_MAJORITY_FRAC = 0.68
+
+AMBIENT_SCENARIO_KEYS = ("scenario_bird", "scenario_crickets", "scenario_dog")
 
 CATEGORIES = ("gunshot", "missile_launch", "drone", "tank")
 CATEGORY_LABELS = {
-    "gunshot":        "Arma leggera",
-    "missile_launch": "Lancio missile / UCAS",
+    "gunshot":        "Gunfire",
+    "missile_launch": "Missile / UCAS launch",
     "drone":          "UAV / drone",
-    "tank":           "Motore carro armato",
+    "tank":           "Tank engine",
 }
+
+LABEL_NOT_RELEVANT = "Not relevant"
 
 AUDIO_EXT = {".wav", ".flac", ".mp3", ".ogg"}
 
@@ -130,7 +139,7 @@ def classify_gunshot(audio, sr):
 
 
 def classify_missile_launch(audio, sr):
-    """Lancio / boost / UCAS: impulso medio-lungo o boost sepolto nel mix UAV."""
+    """Launch / boost / UCAS: medium-long impulse or buried boost in UAV mix."""
     f = _energy_features(audio, sr)
     if f is None or not _is_active(f):
         return None, 0.0
@@ -223,7 +232,7 @@ def classify_chunk(audio_chunk, sr):
 
 
 def _scan_onset_windows(audio: np.ndarray, sr: int, n_peaks: int = 6) -> list[str]:
-    """Classifica finestre centrate sui massimi di salita energetica (eventi rari nel mix)."""
+    """Classify windows at energy-onset peaks (rare events in the mix)."""
     frame = int(sr * 0.02)
     if len(audio) < frame * 4:
         return []
@@ -268,6 +277,65 @@ def scan_file_for_events(audio_path, sr=SR):
     return scan_audio_for_events(audio, sr)
 
 
+def _bandpass_tank_rms(audio: np.ndarray, sr: int) -> float:
+    b, a = signal.butter(4, [70 / (sr / 2), 1400 / (sr / 2)], btype="band")
+    y = signal.filtfilt(b, a, audio.astype(np.float64))
+    return float(np.sqrt(np.mean(y ** 2)) + 1e-12)
+
+
+def _comparative_tank_ratio(mixture: np.ndarray, sr: int) -> float:
+    """Tank-band energy on mix vs drone-only (same light preprocess)."""
+    if not DRONE_REF_PATH.exists() or len(mixture) < sr:
+        return 999.0
+    drone, _ = librosa.load(DRONE_REF_PATH, sr=sr, duration=len(mixture) / sr)
+    if len(drone) < len(mixture):
+        reps = int(np.ceil(len(mixture) / len(drone)))
+        drone = np.tile(drone, reps)[: len(mixture)]
+    else:
+        drone = drone[: len(mixture)]
+    clean_mix = _cancel_wind_noise(mixture, sr)
+    clean_drone = _cancel_wind_noise(drone, sr)
+    return _bandpass_tank_rms(clean_mix, sr) / (_bandpass_tank_rms(clean_drone, sr) + 1e-12)
+
+
+def filter_military_relevance(
+    label: str | None,
+    counts: Counter,
+    onset_types: list[str],
+    audio: np.ndarray,
+    sr: int,
+) -> str | None:
+    """Drop spurious tank (rotor/forest); impulsive labels from dominant_detection."""
+    if label is None:
+        return None
+    n = sum(counts.values())
+    if n == 0:
+        return None
+
+    if label == "tank":
+        if counts["tank"] < n * 0.52:
+            return None
+        if counts["tank"] >= n * TANK_MAJORITY_FRAC:
+            return label
+        if _comparative_tank_ratio(audio, sr) < TANK_COMPARATIVE_MIN_RATIO:
+            return None
+        return label
+
+    if label == "drone" and counts["drone"] < n * 0.40:
+        return None
+    return label
+
+
+def filter_ambient_scenario(label: str | None, counts: Counter, onset_types: list[str]) -> str | None:
+    """UAV + animal scenario files (scenario_bird_* …): no military alert."""
+    return None
+
+
+def _is_ambient_scenario_path(path: Path) -> bool:
+    name = path.name.lower()
+    return any(k in name for k in AMBIENT_SCENARIO_KEYS)
+
+
 def dominant_detection(detected_types, onset_types: list[str] | None = None):
     if not detected_types and not onset_types:
         return None
@@ -299,7 +367,8 @@ def dominant_detection(detected_types, onset_types: list[str] | None = None):
 def classify_audio_array(audio, sr=SR):
     sliding = scan_audio_for_events(audio, sr)
     onsets = _scan_onset_windows(audio, sr)
-    return dominant_detection(sliding, onsets)
+    label = dominant_detection(sliding, onsets)
+    return filter_military_relevance(label, Counter(sliding), onsets, audio, sr)
 
 
 def classify_audio_file(audio_path, sr=SR):
@@ -307,11 +376,16 @@ def classify_audio_file(audio_path, sr=SR):
     return classify_audio_array(audio, sr)
 
 
-# ── CLI / integrazione ──────────────────────────────────────────────────────
+# ── CLI / integration ───────────────────────────────────────────────────────
 def detect_file(path: Path, drone_id: str = "drone_1") -> dict:
     audio, sr = librosa.load(path, sr=SR)
     events = scan_audio_for_events(audio, sr)
-    label = classify_audio_array(audio, sr)
+    sliding = events
+    onsets = _scan_onset_windows(audio, sr)
+    label = dominant_detection(sliding, onsets)
+    label = filter_military_relevance(label, Counter(sliding), onsets, audio, sr)
+    if _is_ambient_scenario_path(path):
+        label = filter_ambient_scenario(label, Counter(sliding), onsets)
 
     frame_length = int(sr * 0.01)
     energy = np.array([
@@ -329,16 +403,23 @@ def detect_file(path: Path, drone_id: str = "drone_1") -> dict:
     else:
         confidence = 0.0
 
+    relevant = label is not None
+    if relevant:
+        label_human = CATEGORY_LABELS[label]
+    else:
+        label_human = LABEL_NOT_RELEVANT
+
     return {
         "drone_id":      drone_id,
-        "path":           str(path),
-        "label":          label,
-        "label_human":    CATEGORY_LABELS.get(label, label or "silenzio"),
-        "timestamp_ns":   timestamp_ns,
-        "confidence":     confidence,
-        "window_counts":  dict(counts),
-        "windows_total":  len(events) if events else 0,
-        "bearing":        None,
+        "path":          str(path),
+        "label":         label,
+        "label_human":   label_human,
+        "relevant":      relevant,
+        "timestamp_ns":  timestamp_ns,
+        "confidence":    confidence if relevant else 0.0,
+        "window_counts": dict(counts),
+        "windows_total": len(events) if events else 0,
+        "bearing":       None,
     }
 
 
@@ -354,29 +435,28 @@ def print_result(result: dict, expected: str | None = None):
         line += f"  [{parts}]"
     if expected:
         ok = label == expected
-        line = ("✅ " if ok else "⚠️ ") + line + f"  (atteso: {CATEGORY_LABELS.get(expected, expected)})"
+        line = ("✅ " if ok else "⚠️ ") + line + f"  (expected: {CATEGORY_LABELS.get(expected, expected)})"
     print(line)
+
+
+def _audio_files_in_dir(d: Path, recursive: bool = True) -> list[Path]:
+    it = d.rglob("*") if recursive else d.iterdir()
+    return sorted(
+        p for p in it
+        if p.is_file()
+        and p.suffix.lower() in AUDIO_EXT
+        and not p.name.startswith("._")
+    )
 
 
 def collect_paths(paths: list[str], folder: str | None) -> list[Path]:
     out: list[Path] = []
     if folder:
-        d = Path(folder)
-        out.extend(
-            sorted(
-                p for p in d.iterdir()
-                if p.suffix.lower() in AUDIO_EXT and not p.name.startswith("._")
-            )
-        )
+        out.extend(_audio_files_in_dir(Path(folder)))
     for raw in paths:
         p = Path(raw)
         if p.is_dir():
-            out.extend(
-                sorted(
-                    x for x in p.iterdir()
-                    if x.suffix.lower() in AUDIO_EXT and not x.name.startswith("._")
-                )
-            )
+            out.extend(_audio_files_in_dir(p))
         elif p.exists():
             out.append(p)
     return out
@@ -387,12 +467,12 @@ def run_gunshot_benchmark():
         f for f in GUNSHOT_DIR.glob("*.wav") if not f.name.startswith("._")
     ) if GUNSHOT_DIR.exists() else []
     if not gunshot_files:
-        print(f"\n── DCASE gunshot: cartella non trovata ({GUNSHOT_DIR})")
+        print(f"\n── DCASE gunshot: folder not found ({GUNSHOT_DIR})")
         return
 
-    print(f"\n── Benchmark gunshot (DCASE, {len(gunshot_files)} file) ─────────")
+    print(f"\n── Gunshot benchmark (DCASE, {len(gunshot_files)} files) ────────")
     summary = {c: 0 for c in CATEGORIES}
-    summary["non rilevato"] = 0
+    summary["not_detected"] = 0
     for f in gunshot_files:
         label = classify_audio_file(f)
         if label:
@@ -400,21 +480,21 @@ def run_gunshot_benchmark():
             status = "✅" if label == "gunshot" else "⚠️"
             print(f"{status} {f.name}: {label}")
         else:
-            summary["non rilevato"] += 1
-            print(f"❌ {f.name}: non rilevato")
+            summary["not_detected"] += 1
+            print(f"❌ {f.name}: not detected")
     n = len(gunshot_files)
-    print(f"\nGunshot corretto:     {summary['gunshot']}/{n}")
+    print(f"\nCorrect gunshot:      {summary['gunshot']}/{n}")
     print(f"Missile launch (fp):  {summary['missile_launch']}/{n}")
     print(f"Drone (fp):           {summary['drone']}/{n}")
     print(f"Tank (fp):            {summary['tank']}/{n}")
-    print(f"Non rilevato:         {summary['non rilevato']}/{n}")
+    print(f"Not detected:         {summary['not_detected']}/{n}")
 
 
 def run_esc50_proxy_test():
     esc_meta = DATA_DIR / "ESC-50/meta/esc50.csv"
     esc_audio = DATA_DIR / "ESC-50/audio"
     if not esc_meta.exists() or not esc_audio.exists():
-        print("\n── ESC-50: cartella non trovata, salto test proxy ────────")
+        print("\n── ESC-50: folder not found, skipping proxy test ─────────")
         return
 
     test_categories = {
@@ -435,20 +515,20 @@ def run_esc50_proxy_test():
             if row["category"] in rows_by_cat:
                 rows_by_cat[row["category"]].append(row["filename"])
 
-    print("\n── Test proxy / falsi positivi (ESC-50) ─────────────────")
+    print("\n── ESC-50 proxy / false-positive test ──────────────────")
     fp_count = 0
-    hit_keys = list(CATEGORIES) + ["silenzio"]
+    hit_keys = list(CATEGORIES) + ["silent"]
     for category, expected in test_categories.items():
         files = rows_by_cat[category]
         hits = {k: 0 for k in hit_keys}
         for filename in files:
             label = classify_audio_file(esc_audio / filename)
             if label is None:
-                hits["silenzio"] += 1
+                hits["silent"] += 1
             else:
                 hits[label] += 1
         total = len(files)
-        if hits["silenzio"] == total:
+        if hits["silent"] == total:
             majority = None
         else:
             majority = max(CATEGORIES, key=lambda k: hits[k])
@@ -461,15 +541,15 @@ def run_esc50_proxy_test():
             status = "✅" if ok else "⚠️"
             exp_str = "/".join(sorted(expected))
             counts = " ".join(f"{k[:3]} {hits[k]}" for k in CATEGORIES)
-            print(f"{status} {category:16} → '{majority}' (atteso: {exp_str})  [{counts} ∅ {hits['silenzio']}/{total}]")
+            print(f"{status} {category:16} → '{majority}' (expected: {exp_str})  [{counts} ∅ {hits['silent']}/{total}]")
         else:
-            ok = majority is None or hits["silenzio"] >= total * 0.75
+            ok = majority is None or hits["silent"] >= total * 0.75
             if not ok:
                 fp_count += 1
-            status = "✅" if ok else "⚠️ FALSO ALLARME"
+            status = "✅" if ok else "⚠️ FALSE ALARM"
             counts = " ".join(f"{k[:3]} {hits[k]}" for k in CATEGORIES)
-            print(f"{status} {category:16} → '{majority}' (atteso: silenzio)  [{counts} ∅ {hits['silenzio']}/{total}]")
-    print(f"\nCategorie con problemi: {fp_count}/{len(test_categories)}")
+            print(f"{status} {category:16} → '{majority}' (expected: silent)  [{counts} ∅ {hits['silent']}/{total}]")
+    print(f"\nCategories with issues: {fp_count}/{len(test_categories)}")
 
 
 def run_demo_samples():
@@ -480,9 +560,9 @@ def run_demo_samples():
         "missile_launch": "missile_launch",
     }
     if not SAMPLES_DIR.exists():
-        print(f"\n── Demo samples: crea {SAMPLES_DIR}/gunshot|tank|drone|missile_launch/")
+        print(f"\n── Demo samples: create {SAMPLES_DIR}/gunshot|tank|drone|missile_launch/")
         return
-    print("\n── Demo classi (samples/) ─────────────────────────────")
+    print("\n── Demo classes (samples/) ───────────────────────────")
     ok, total = 0, 0
     for folder, expected in sample_folders.items():
         path = SAMPLES_DIR / folder
@@ -498,14 +578,48 @@ def run_demo_samples():
             match = label == expected
             ok += int(match)
             icon = "✅" if match else "⚠️"
-            print(f"  {icon} {f.name}: {CATEGORY_LABELS.get(label, label or '—')} (atteso: {CATEGORY_LABELS[expected]})")
+            print(f"  {icon} {f.name}: {CATEGORY_LABELS.get(label, label or '—')} (expected: {CATEGORY_LABELS[expected]})")
     if total:
         print(f"\n  Accuracy demo samples: {ok}/{total}")
+
+
+NEGATIVE_DIR = SAMPLES_DIR / "negative"
+
+
+def run_negative_samples_test():
+    """Files in data/samples/negative/: no military alert expected."""
+    if not NEGATIVE_DIR.exists():
+        print(f"\n── Negative samples: missing {NEGATIVE_DIR}/")
+        print("  (optional) python prepare_negative_samples.py")
+        return
+
+    files = _audio_files_in_dir(NEGATIVE_DIR, recursive=True)
+    if not files:
+        print(f"\n── Negative samples: {NEGATIVE_DIR}/ is empty")
+        return
+
+    print(f"\n── Negative test (forest / animals, {len(files)} files) ───────")
+    false_alarms = 0
+    silent = 0
+    for f in files:
+        label = classify_audio_file(f)
+        cat = f.parent.name if f.parent != NEGATIVE_DIR else "—"
+        if label is None:
+            silent += 1
+            print(f"  ✅ {cat}/{f.name}: (no alert)")
+        else:
+            false_alarms += 1
+            human = CATEGORY_LABELS.get(label, label)
+            print(f"  ⚠️  {cat}/{f.name}: FALSE ALARM → {human} ({label})")
+
+    print(f"\n  Not relevant / silent: {silent}/{len(files)}")
+    print(f"  False alarms:          {false_alarms}/{len(files)}")
 
 
 def run_benchmarks():
     run_gunshot_benchmark()
     run_esc50_proxy_test()
+    run_negative_samples_test()
     run_demo_samples()
 
 
@@ -520,17 +634,27 @@ def write_results_json(results: list[dict], path: Path) -> Path:
 
 
 def main():
-    p = argparse.ArgumentParser(description="Detection audio: gunshot, tank, drone, missile_launch")
-    p.add_argument("audio", nargs="*", help="file .wav/.flac/.mp3 da classificare")
-    p.add_argument("--folder", "-f", help="classifica tutti gli audio in una cartella")
-    p.add_argument("--json", action="store_true", help="stampa JSON su stdout")
+    p = argparse.ArgumentParser(description="Audio detection: gunshot, tank, drone, missile_launch")
+    p.add_argument("audio", nargs="*", help="audio file(s) .wav/.flac/.mp3 to classify")
+    p.add_argument("--folder", "-f", help="classify all audio in a folder")
+    p.add_argument("--json", action="store_true", help="print JSON to stdout")
     p.add_argument(
         "-o", "--output",
-        help="salva JSON su file (default con --folder: <cartella>/detections.json)",
+        help="write JSON file (with --folder --json default: <folder>/detections.json)",
     )
-    p.add_argument("--drone-id", default="drone_1", help="ID drone per payload TDOA/WebSocket")
-    p.add_argument("--benchmark", action="store_true", help="test DCASE gunshot, ESC-50, samples/")
+    p.add_argument("--drone-id", default="drone_1", help="drone ID for TDOA / WebSocket payload")
+    p.add_argument("--benchmark", action="store_true", help="run DCASE, ESC-50, negative, samples tests")
+    p.add_argument(
+        "--negative",
+        action="store_true",
+        help="negative-sample false-alarm test only (data/samples/negative/)",
+    )
     args = p.parse_args()
+
+    if args.negative:
+        run_negative_samples_test()
+        if not args.audio and not args.folder:
+            return
 
     if args.benchmark:
         run_benchmarks()
@@ -540,10 +664,10 @@ def main():
     files = collect_paths(args.audio, args.folder)
     if not files:
         if not args.benchmark:
-            print("Uso: python detect_audio.py <file.wav> [altri file ...]", file=sys.stderr)
-            print("     python detect_audio.py --folder data/scenarios", file=sys.stderr)
-            print("     python detect_audio.py --folder data/scenarios --json -o data/scenarios/detections.json", file=sys.stderr)
-            print("     python detect_audio.py --benchmark", file=sys.stderr)
+            print("Usage: python detection/detect_audio.py <file.wav> [more files ...]", file=sys.stderr)
+            print("       python detection/detect_audio.py --folder data/scenarios", file=sys.stderr)
+            print("       python detection/detect_audio.py --folder data/scenarios -o output/events.json", file=sys.stderr)
+            print("       python detection/detect_audio.py --benchmark", file=sys.stderr)
             sys.exit(1)
         return
 
@@ -558,22 +682,32 @@ def main():
 
     if out_path is not None:
         written = write_results_json(results, out_path)
-        print(f"JSON salvato: {written}", file=sys.stderr)
+        print(f"JSON written: {written}", file=sys.stderr)
 
     if args.json:
         print(payload)
         return
 
-    print("── Detection (4 classi) ────────────────────────────────")
+    print("── Detection (4 classes) ───────────────────────────────")
     for r in results:
         print_result(r)
 
     if all("scenario_" in Path(r["path"]).name for r in results):
-        hints = {"tank": "tank", "gunshot": "gunshot", "missile": "missile_launch"}
-        print("\n── Confronto nome file (solo hint) ─────────────────────")
+        military_hints = {"tank": "tank", "gunshot": "gunshot", "missile": "missile_launch"}
+        ambient_keys = ("bird", "crickets", "dog", "frog", "animal")
+        print("\n── Filename hints (sanity check) ───────────────────────")
         for r in results:
             name = Path(r["path"]).name.lower()
-            expected = next((lab for key, lab in hints.items() if key in name), None)
+            if any(k in name for k in ambient_keys):
+                ok = not r["label"]
+                line = ("✅ " if ok else "⚠️ ") + f"{Path(r['path']).name}: {r['label_human']}"
+                if r["window_counts"]:
+                    parts = " ".join(f"{k}={v}" for k, v in sorted(r["window_counts"].items()))
+                    line += f"  [{parts}]"
+                line += "  (expected: not relevant)"
+                print(line)
+                continue
+            expected = next((lab for key, lab in military_hints.items() if key in name), None)
             if expected:
                 print_result(r, expected=expected)
 
