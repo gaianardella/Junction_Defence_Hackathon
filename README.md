@@ -59,3 +59,7 @@ python detection/detect_audio.py --folder data/scenarios -o detection/output/eve
 | `null` / `relevant: false` | Not relevant (animals, background) |
 
 See `detection/output/events.json` for the full payload (`drone_id`, `timestamp_ns`, `bearing`, …).
+
+## Architecture
+
+- **[Mesh Network Dependencies](docs/MESH_ARCHITECTURE.md)** — system flow diagram, mesh dependency table (data rate / latency / criticality), and graceful degradation matrix for GPS-denied / mesh-loss scenarios.

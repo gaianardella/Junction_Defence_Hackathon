@@ -31,7 +31,8 @@ timestamps and drone positions.
 |---|---|
 | `triangulation/__init__.py` | package marker; exports `locate`, `policy`, `viewer` names |
 | `triangulation/locate.py` | CLI + pipeline orchestration; grouping, filtering, projection, MC, JSON write |
-| `triangulation/policy.py` | Pure ROE engine: `decide()` → `Decision`, `priority()` → float. No I/O. |
+| `triangulation/policy.py` | Pure ROE engine: `decide()` → `Decision`, `priority()` → float. No I/O. `ALWAYS_STRIKE_LABELS` bypasses CEP50/GDOP envelope for unconditionally strike-eligible labels (currently `"gunshot"`). |
+| `triangulation/jam.py` | GPS-jamming simulator: `apply_jamming(events, target_drone_id, *, pos_mult, time_mult, jam_label)` — scales error fields for one drone, adds `jam_status` per row. |
 | `triangulation/projection.py` | equirectangular lat/lon ↔ local-plane (metres). Valid <~2 km |
 | `triangulation/viewer.py` | Dash + Plotly OpenStreetMap viewer; scenario dropdown, no recomputation |
 | `triangulation/core/io.py` | `relative_times(events, ts_field)` — ns-safe time conversion |
@@ -97,6 +98,8 @@ Flat JSON list, one entry per localised group. Field reference:
 | `source_mgrs` | str \| null | 10 m MGRS grid reference; `null` if `mgrs` package not installed |
 | `threat_priority` | float | numeric urgency score from `policy.priority()`; higher = more urgent |
 | `priority_rank` | int | 0-based rank across all localised scenarios in the file (0 = highest) |
+| `scenario_variant` | str \| null | `"clean"`, `"jammed-drone_2"`, etc. — set via `--variant-tag` CLI flag |
+| `jam_status_per_drone` | obj \| null | `{drone_id: "clean" \| "gps_jammed"}` — present only in jammed variants |
 
 ## Algorithm (per group)
 
@@ -124,6 +127,11 @@ Flat JSON list, one entry per localised group. Field reference:
 | `locate.py` CLI | `--cloud-format` | `ellipse` |
 | `locate.py` CLI | `--confidence` | `0.95` |
 | `locate.py` CLI | `--mc-samples` | `400` |
+| `policy.py` | `STRIKE_CEP_MAX` | `10.0` m |
+| `policy.py` | `STRIKE_GDOP_MAX` | `3.0` |
+| `policy.py` | `HOLD_CONFIDENCE_FLOOR` | `0.10` |
+| `policy.py` | `ALWAYS_STRIKE_LABELS` | `("gunshot",)` — bypasses CEP/GDOP envelope; checked after HOLD floor |
+| `policy.py` | `STRIKE_ELIGIBLE_LABELS` | `("gunshot","missile_launch","tank")` |
 
 ## Coordinate conventions
 

@@ -388,6 +388,127 @@
     #roeBanner.roe-recon  { background: rgba(232,168,56,0.18); border: 1px solid rgba(232,168,56,0.55); color: #e8a838; }
     #roeBanner.roe-false  { background: rgba(100,140,100,0.18); border: 1px solid rgba(79,216,122,0.35); color: var(--accent); }
 
+    /* ── Camera feed popup ───────────────────────────────────── */
+    @keyframes feed-slide-in {
+      from { transform: translateX(115%); opacity: 0; }
+      to   { transform: translateX(0);    opacity: 1; }
+    }
+    @keyframes rec-blink {
+      0%,49% { opacity: 1; }
+      50%,100% { opacity: 0.2; }
+    }
+
+    .recon-feed {
+      position: absolute;
+      bottom: 48px;
+      right: 14px;
+      width: 288px;
+      height: 216px;
+      border: 1px solid var(--accent);
+      border-radius: 3px;
+      overflow: hidden;
+      background: #050a06;
+      z-index: 15;
+      display: none;
+      pointer-events: none;
+      box-shadow: 0 0 18px rgba(79,216,122,0.25);
+    }
+    .recon-feed.visible {
+      display: block;
+      animation: feed-slide-in 0.35s ease-out forwards;
+    }
+    .recon-feed img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: brightness(0.82) contrast(1.15) saturate(0);
+    }
+    /* Scanlines overlay */
+    .recon-feed .feed-scanlines {
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 3px,
+        rgba(0,0,0,0.12) 3px,
+        rgba(0,0,0,0.12) 4px
+      );
+      pointer-events: none;
+    }
+    /* Crosshair */
+    .recon-feed .feed-cross {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+    .recon-feed .feed-cross::before,
+    .recon-feed .feed-cross::after {
+      content: '';
+      position: absolute;
+      background: rgba(79,216,122,0.55);
+    }
+    .recon-feed .feed-cross::before {
+      width: 1px; height: 28px;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .recon-feed .feed-cross::after {
+      height: 1px; width: 28px;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .recon-feed .feed-label {
+      position: absolute;
+      top: 7px; left: 9px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.56rem;
+      color: var(--accent);
+      letter-spacing: 0.1em;
+    }
+    .recon-feed .feed-rec {
+      position: absolute;
+      top: 7px; right: 9px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.56rem;
+      color: var(--hostile);
+      letter-spacing: 0.08em;
+      animation: rec-blink 1s step-end infinite;
+    }
+    .recon-feed .feed-ts {
+      position: absolute;
+      bottom: 7px; left: 9px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.52rem;
+      color: var(--accent);
+      opacity: 0.65;
+    }
+    .recon-feed .feed-coord {
+      position: absolute;
+      bottom: 7px; right: 9px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.52rem;
+      color: var(--accent);
+      opacity: 0.65;
+      text-align: right;
+    }
+    /* Corner brackets */
+    .recon-feed .feed-corner {
+      position: absolute;
+      width: 12px; height: 12px;
+      border-color: var(--accent);
+      border-style: solid;
+      opacity: 0.7;
+    }
+    .recon-feed .feed-corner.tl { top: 0; left: 0;
+      border-width: 1px 0 0 1px; }
+    .recon-feed .feed-corner.tr { top: 0; right: 0;
+      border-width: 1px 1px 0 0; }
+    .recon-feed .feed-corner.bl { bottom: 0; left: 0;
+      border-width: 0 0 1px 1px; }
+    .recon-feed .feed-corner.br { bottom: 0; right: 0;
+      border-width: 0 1px 1px 0; }
+
     /* ── NEXT button ─────────────────────────────────────────── */
     @keyframes next-pulse {
       0%,100% { box-shadow: 0 0 0 0 rgba(79,216,122,0); }
@@ -401,11 +522,78 @@
     }
     #btnNext.visible { display: inline-block; }
 
+    /* ── Target stack ────────────────────────────────────────── */
+    .target-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 4px;
+    }
+
+    .stack-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 8px;
+      border: 1px solid transparent;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      background: rgba(0,0,0,0.2);
+    }
+    .stack-row:hover {
+      background: rgba(79,216,122,0.07);
+      border-color: rgba(79,216,122,0.2);
+    }
+    .stack-row.active {
+      background: rgba(79,216,122,0.1);
+      border-color: rgba(79,216,122,0.4);
+    }
+    .stack-rank {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.58rem;
+      color: var(--text-dim);
+      min-width: 14px;
+      text-align: center;
+    }
+    .stack-row.active .stack-rank { color: var(--accent); }
+    .stack-info { flex: 1; min-width: 0; }
+    .stack-title {
+      font-family: "Rajdhani", sans-serif;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .stack-row.active .stack-title { color: var(--accent); }
+    .stack-cep {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.52rem;
+      color: var(--text-dim);
+      margin-top: 1px;
+    }
+    .action-chip {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.52rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      padding: 2px 6px;
+      border-radius: 2px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .action-chip.strike { background: rgba(232,92,74,0.2);  color: var(--hostile); border: 1px solid rgba(232,92,74,0.4); }
+    .action-chip.recon  { background: rgba(232,168,56,0.2); color: var(--warn);    border: 1px solid rgba(232,168,56,0.4); }
+    .action-chip.hold   { background: rgba(80,80,80,0.2);   color: var(--text-dim);border: 1px solid rgba(100,100,100,0.3); }
+    .action-chip.fa     { background: rgba(79,216,122,0.1); color: var(--accent);  border: 1px solid rgba(79,216,122,0.3); }
+
     .log {
       font-family: "JetBrains Mono", monospace;
       font-size: 0.65rem;
       line-height: 1.5;
-      max-height: calc(100vh - 200px);
+      max-height: calc(40vh - 60px);
       overflow-y: auto;
       color: var(--text-dim);
     }
@@ -572,10 +760,26 @@
         </div>
         <div id="roeBanner"></div>
       </div>
+      <!-- Camera feed popup -->
+      <div class="recon-feed" id="reconFeed">
+        <img src="assets/recon-feed.jpg" alt="" id="reconFeedImg" />
+        <div class="feed-scanlines"></div>
+        <div class="feed-cross"></div>
+        <div class="feed-label">CAM-1 · IR</div>
+        <div class="feed-rec">● REC</div>
+        <div class="feed-ts" id="feedTs">00:00:00Z</div>
+        <div class="feed-coord" id="feedCoord">—</div>
+        <div class="feed-corner tl"></div>
+        <div class="feed-corner tr"></div>
+        <div class="feed-corner bl"></div>
+        <div class="feed-corner br"></div>
+      </div>
     </div>
 
     <aside class="panel" style="grid-row: 2">
-      <h2>Event log</h2>
+      <h2>Target stack</h2>
+      <div class="target-stack" id="targetStack"></div>
+      <h2 style="margin-top: 10px">Event log</h2>
       <div class="log" id="eventLog"></div>
     </aside>
 
@@ -746,6 +950,31 @@
       }
     ];
 
+    // ─── Telemetry schedule ───────────────────────────────────────────────
+    // `at` = fraction of drone-flight progress (0→1) at which to fire.
+    // For HOLD (no drone), `at` is fraction of a 14-second hold window.
+    const TELEMETRY = {
+      STRIKE: [
+        { at: 0.05, msg: "RESPONDER DISPATCHED · WEAPONS HOT",   lvl: "warn"    },
+        { at: 0.48, msg: "FINAL APPROACH · TARGET LOCKED",        lvl: "warn"    },
+        { at: 0.88, msg: "IMPACT · TARGET NEUTRALIZED",           lvl: "hostile" }
+      ],
+      RECON: [
+        { at: 0.05, msg: "RECON DISPATCHED · APPROACH INBOUND",   lvl: "warn"    },
+        { at: 0.38, msg: "ON-TARGET · IMAGING NOW",               lvl: "warn"    },
+        { at: 0.68, msg: "POSITIVE ID · HOSTILE CONFIRMED",       lvl: "hostile" },
+        { at: 0.90, msg: "REPORT SENT · AWAITING AUTHORITY",      lvl: "ok"      }
+      ],
+      HOLD: [
+        { at: 0.12, msg: "STANDBY · INSUFFICIENT CONFIDENCE",     lvl: "warn"    },
+        { at: 0.55, msg: "REPOSITIONING SWARM FOR NEXT FIX",      lvl: "ok"      }
+      ],
+      FALSE_ALARM: [
+        { at: 0.10, msg: "FALSE ALARM CONFIRMED · NO THREAT",     lvl: "ok"      },
+        { at: 0.50, msg: "CLASSIFIER ERROR LOGGED · CONTINUING",  lvl: "ok"      }
+      ]
+    };
+
     const PHASE_MS = {
       transit:  7000,
       listen:   4500,
@@ -784,7 +1013,10 @@
         localizeLogged: false,
         holdLogged: false,
         introShown: false,
-        reconDrone: null
+        reconDrone: null,
+        telemetryFired: new Set(),
+        feedShown: false,
+        holdProgressMs: 0
       },
       ws: null,
       pingCount: 0,
@@ -1138,6 +1370,40 @@
       document.getElementById("btnNext").classList.remove("visible");
     }
 
+    // ─── Camera feed helpers ──────────────────────────────────────────────
+    function showReconFeed(frame) {
+      const el = document.getElementById("reconFeed");
+      el.classList.add("visible");
+      // Update coordinate overlay from the source lat/lon
+      const src = frame.entry.source;
+      document.getElementById("feedCoord").textContent =
+        `${src.lat.toFixed(4)}°N ${src.lon.toFixed(4)}°E`;
+    }
+
+    function hideReconFeed() {
+      document.getElementById("reconFeed").classList.remove("visible");
+    }
+
+    function updateFeedTimestamp() {
+      const ts = new Date().toISOString().slice(11, 19) + "Z";
+      const el = document.getElementById("feedTs");
+      if (el) el.textContent = ts;
+    }
+
+    // ─── Telemetry helper ─────────────────────────────────────────────────
+    function tickTelemetry(pb, cur, progress) {
+      const fa  = cur.meta.falseAlarm;
+      const act = cur.entry.recommended_action || "HOLD";
+      const key = fa ? "FALSE_ALARM" : act;
+      const schedule = TELEMETRY[key] || [];
+      for (let i = 0; i < schedule.length; i++) {
+        if (!pb.telemetryFired.has(i) && progress >= schedule[i].at) {
+          pb.telemetryFired.add(i);
+          addLog(schedule[i].msg, schedule[i].lvl);
+        }
+      }
+    }
+
     // ─── Clear RECON/false-alarm CSS from all target entities ─────────────
     function clearTargetStyles() {
       for (const [, el] of entityEls) {
@@ -1160,6 +1426,7 @@
         const frame = state.frames[pb.index];
         if (pb.phase === "listen")   { logPlaybackEvent(frame, "listen");   syncMapView(frame.bounds); }
         if (pb.phase === "localize")   logPlaybackEvent(frame, "localize");
+        updateTargetStack();
         return;
       }
       // Advance to next scenario — clean up styling first
@@ -1172,16 +1439,21 @@
       pb.phase          = "transit";
       pb.phaseT         = 0;
       pb.patrolT        = 0;
-      pb.localizeLogged = false;
-      pb.holdLogged     = false;
-      pb.introShown     = false;
-      pb.reconDrone     = null;
-      state.targets     = [];
+      pb.localizeLogged  = false;
+      pb.holdLogged      = false;
+      pb.introShown      = false;
+      pb.reconDrone      = null;
+      pb.telemetryFired  = new Set();
+      pb.feedShown       = false;
+      pb.holdProgressMs  = 0;
+      state.targets      = [];
+      hideReconFeed();
       state.cloud       = [];
       state.cloudAlpha  = 0;
       // Show intro card for incoming scenario, then sync map
       const next = state.frames[pb.index];
       showScenarioIntro(next, pb.index, state.frames.length);
+      updateTargetStack();
       syncMapView(next.bounds);
     }
 
@@ -1311,8 +1583,27 @@
           showNextButton();
         }
 
-        if (Math.random() < 0.015)
+        if (state.targets.length && Math.random() < 0.015)
           emitPulse(state.targets[0].x, state.targets[0].y, "rgba(232, 92, 74, 0.25)");
+
+        // Telemetry — progress based on drone flight t, or elapsed time for HOLD
+        pb.holdProgressMs = (pb.holdProgressMs || 0) + dt;
+        const fa  = cur.meta.falseAlarm;
+        const act = cur.entry.recommended_action || "HOLD";
+        const telProgress = pb.reconDrone
+          ? pb.reconDrone.t
+          : Math.min(1, pb.holdProgressMs / 14000);
+        tickTelemetry(pb, cur, telProgress);
+
+        // Camera feed: show for RECON at t≥0.38, STRIKE at t≥0.65
+        if (pb.reconDrone && !pb.feedShown) {
+          const showAt = act === "STRIKE" ? 0.65 : 0.38;
+          if (pb.reconDrone.t >= showAt) {
+            pb.feedShown = true;
+            showReconFeed(cur);
+          }
+        }
+        updateFeedTimestamp();
 
         // Animate responder drone flying toward the target
         if (pb.reconDrone) {
@@ -1367,12 +1658,14 @@
       hideRoeBanner();
       hideNextButton();
       hideScenarioIntro();
+      hideReconFeed();
       state.playback = {
         index: 0, prevIndex: n - 1,
         phase: "transit", phaseT: 0,
         paused: false, missionMs: 0,
         localizeLogged: false, holdLogged: false, introShown: false,
-        reconDrone: null
+        reconDrone: null, telemetryFired: new Set(), feedShown: false,
+        holdProgressMs: 0
       };
       state.cloudAlpha = 0;
       state.targets    = [];
@@ -1381,6 +1674,7 @@
       syncMapView(state.frames[0].bounds);
       // Show intro card for the first scenario
       showScenarioIntro(state.frames[0], 0, n);
+      buildTargetStack();
       updateTimelineUI();
       addLog(`Mission · ${n} curated scenarios — press NEXT to advance`, "ok");
     }
@@ -1511,6 +1805,75 @@
       const lon = (b.minLon + cx * (b.maxLon - b.minLon)).toFixed(4);
       document.getElementById("coords").textContent =
         `LAT ${lat}°N · LON ${lon}°E · HDG ${Math.floor((demoT * 80) % 360)}°`;
+    }
+
+    // ─── Target stack ─────────────────────────────────────────────────────
+    function buildTargetStack() {
+      const root = document.getElementById("targetStack");
+      if (!root || !state.frames.length) return;
+      root.innerHTML = "";
+
+      // Sort frames by threat_priority descending for display order
+      const sorted = state.frames
+        .map((f, i) => ({ f, i }))
+        .sort((a, b) => b.f.entry.threat_priority - a.f.entry.threat_priority);
+
+      for (const { f, i } of sorted) {
+        const e   = f.entry;
+        const fa  = f.meta.falseAlarm;
+        const act = e.recommended_action || "HOLD";
+        const chipClass = fa ? "fa" : (act === "STRIKE" ? "strike" : act === "RECON" ? "recon" : "hold");
+        const chipLabel = fa ? "F/A" : act;
+
+        const row = document.createElement("div");
+        row.className   = "stack-row";
+        row.dataset.idx = i;
+        row.innerHTML   = `
+          <div class="stack-rank">#${sorted.indexOf(sorted.find(s => s.i === i)) + 1}</div>
+          <div class="stack-info">
+            <div class="stack-title">${f.meta.title}</div>
+            <div class="stack-cep">CEP50 ${e.cep50_m}m · GDOP ${e.gdop}</div>
+          </div>
+          <div class="action-chip ${chipClass}">${chipLabel}</div>`;
+        row.addEventListener("click", () => jumpToScenario(i));
+        root.appendChild(row);
+      }
+      updateTargetStack();
+    }
+
+    function updateTargetStack() {
+      document.querySelectorAll(".stack-row").forEach((row) => {
+        row.classList.toggle("active",
+          parseInt(row.dataset.idx) === state.playback.index);
+      });
+    }
+
+    function jumpToScenario(frameIndex) {
+      if (frameIndex === state.playback.index) return;
+      clearTargetStyles();
+      hideRoeBanner();
+      hideNextButton();
+      hideReconFeed();
+      hideScenarioIntro();
+      const pb      = state.playback;
+      pb.prevIndex  = pb.index;
+      pb.index      = frameIndex;
+      pb.phase      = "transit";
+      pb.phaseT     = 0;
+      pb.patrolT    = 0;
+      pb.localizeLogged = false;
+      pb.holdLogged     = false;
+      pb.reconDrone     = null;
+      pb.telemetryFired = new Set();
+      pb.feedShown      = false;
+      pb.holdProgressMs = 0;
+      state.targets    = [];
+      state.cloud      = [];
+      state.cloudAlpha = 0;
+      const next = state.frames[frameIndex];
+      showScenarioIntro(next, frameIndex, state.frames.length);
+      syncMapView(next.bounds);
+      addLog(`Jumped to: ${next.meta.title}`, "ok");
     }
 
     // ─── UI helpers ───────────────────────────────────────────────────────
