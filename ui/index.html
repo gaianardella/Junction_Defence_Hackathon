@@ -1087,6 +1087,178 @@
       display: none;
     }
     #sbBanner.visible { display: block; }
+
+    /* ── Session 16 — Mesh bandwidth strip ──────────────────────────── */
+    .mesh-strip {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      padding: 6px 14px;
+      border-radius: 4px;
+      border: 1px solid rgba(79, 216, 122, 0.22);
+      background: rgba(0, 0, 0, 0.3);
+      cursor: pointer;
+      transition: border-color 0.2s ease, background 0.2s ease;
+      min-width: 240px;
+      user-select: none;
+    }
+    .mesh-strip:hover {
+      border-color: rgba(79, 216, 122, 0.55);
+      background: rgba(0,0,0,0.45);
+    }
+    .mesh-strip-row1 {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.68rem;
+      letter-spacing: 0.07em;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+    .mesh-strip-row2 {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.6rem;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+      white-space: nowrap;
+    }
+    .mesh-strip .bw-saved { color: #4fd87a; font-weight: 600; }
+    .mesh-strip .bw-pct   { color: #4fd87a; }
+
+    /* ── Session 16 — Mesh popover ──────────────────────────────────── */
+    #meshPopover {
+      display: none;
+      position: fixed;
+      top: 70px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9000;
+      width: min(820px, 96vw);
+      background: rgba(10, 20, 14, 0.97);
+      border: 1px solid rgba(79, 216, 122, 0.45);
+      border-radius: 6px;
+      padding: 18px 20px 16px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.75);
+      font-family: "JetBrains Mono", monospace;
+    }
+    #meshPopover.visible { display: block; }
+    .mp-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .mp-title {
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      text-transform: uppercase;
+    }
+    .mp-close {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 1rem;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 3px;
+      line-height: 1;
+    }
+    .mp-close:hover { color: var(--text); background: rgba(255,255,255,0.08); }
+    .mp-label {
+      font-size: 0.62rem;
+      color: var(--text-dim);
+      letter-spacing: 0.07em;
+      margin-bottom: 6px;
+    }
+    .mp-hex-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .mp-hex-panel {
+      background: rgba(0,0,0,0.4);
+      border: 1px solid rgba(72,160,98,0.2);
+      border-radius: 3px;
+      padding: 10px;
+      overflow: hidden;
+    }
+    .mp-hex-panel .mp-panel-title {
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+    .mp-hex-panel.mesh-side .mp-panel-title { color: var(--accent); }
+    .mp-hex-content {
+      font-size: 0.65rem;
+      line-height: 1.6;
+      word-break: break-all;
+      white-space: pre-wrap;
+      color: #c8f0d8;
+    }
+    .mp-hex-panel.json-side .mp-hex-content { color: #a0c0a8; }
+    .mp-bar-section { margin-bottom: 14px; }
+    .mp-bar-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 5px;
+    }
+    .mp-bar-label {
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      width: 52px;
+      flex-shrink: 0;
+    }
+    .mp-bar-track {
+      flex: 1;
+      height: 10px;
+      background: rgba(255,255,255,0.07);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .mp-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.4s ease;
+    }
+    .mp-bar-fill.mesh  { background: var(--accent); }
+    .mp-bar-fill.json  { background: rgba(232,168,56,0.7); }
+    .mp-bar-val {
+      font-size: 0.6rem;
+      color: var(--text);
+      width: 60px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .mp-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 12px;
+      margin-top: 4px;
+    }
+    .mp-extrap {
+      font-size: 0.58rem;
+      color: var(--text-dim);
+      line-height: 1.5;
+      max-width: 500px;
+    }
+    .mp-extrap strong { color: var(--accent); }
+    .mp-reset {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(72,160,98,0.3);
+      border-radius: 3px;
+      color: var(--text-dim);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.6rem;
+      padding: 5px 10px;
+      cursor: pointer;
+      white-space: nowrap;
+      letter-spacing: 0.06em;
+    }
+    .mp-reset:hover { color: var(--text); border-color: var(--accent); }
   </style>
 </head>
 <body>
@@ -1096,11 +1268,59 @@
         <h1>Tactical Edge — Live Map</h1>
         <p class="subtitle">FINNISH FOREST SECTOR · GPS-DENIED · REAL-TIME</p>
       </div>
+
+      <!-- Session 16 — Mesh bandwidth strip (click to open popover) -->
+      <div class="mesh-strip" id="meshStrip" title="Click to inspect mesh compression detail">
+        <div class="mesh-strip-row1" id="bwRow1">MESH — B &nbsp;/&nbsp; JSON — B &nbsp;/&nbsp; SAVED —%</div>
+        <div class="mesh-strip-row2" id="bwRow2">TOTAL — · — saved · loading…</div>
+      </div>
+
       <div class="status-pill">
         <div class="status-dot" id="wsStatus"></div>
         <span id="wsLabel">DISCONNECTED</span>
       </div>
     </header>
+
+    <!-- Session 16 — Mesh bandwidth popover -->
+    <div id="meshPopover" role="dialog" aria-modal="true">
+      <div class="mp-header">
+        <span class="mp-title">⬡ MESH PROTOCOL vs RAW JSON</span>
+        <button class="mp-close" id="meshPopClose" title="Close">✕</button>
+      </div>
+      <div class="mp-label" id="mpPacketLabel">LAST PACKET · —</div>
+
+      <div class="mp-hex-row">
+        <div class="mp-hex-panel mesh-side">
+          <div class="mp-panel-title">▸ MESH WIRE FORMAT &nbsp;<span id="mpMeshBytes">— B</span></div>
+          <div class="mp-hex-content" id="mpHexMesh">—</div>
+        </div>
+        <div class="mp-hex-panel json-side">
+          <div class="mp-panel-title">▸ JSON EQUIVALENT &nbsp;<span id="mpJsonBytes">— B</span></div>
+          <div class="mp-hex-content" id="mpHexJson">—</div>
+        </div>
+      </div>
+
+      <div class="mp-bar-section">
+        <div class="mp-label">SESSION TOTALS (this session)</div>
+        <div class="mp-bar-row">
+          <span class="mp-bar-label">MESH</span>
+          <div class="mp-bar-track"><div class="mp-bar-fill mesh" id="bwBarMesh" style="width:0%"></div></div>
+          <span class="mp-bar-val" id="bwBarMeshVal">0 B</span>
+        </div>
+        <div class="mp-bar-row">
+          <span class="mp-bar-label">JSON</span>
+          <div class="mp-bar-track"><div class="mp-bar-fill json" id="bwBarJson" style="width:0%"></div></div>
+          <span class="mp-bar-val" id="bwBarJsonVal">0 B</span>
+        </div>
+      </div>
+
+      <div class="mp-footer">
+        <div class="mp-extrap" id="mpExtrap">
+          Extrapolation loading…
+        </div>
+        <button class="mp-reset" id="bwResetBtn">↺ RESET COUNTERS</button>
+      </div>
+    </div>
 
     <aside class="panel" style="grid-row: 2; overflow-y: auto;">
       <h2>Scenarios</h2>
@@ -1489,6 +1709,11 @@
       targets: [],
       cloud: [],
       cloudAlpha: 0,
+      // Session 11 — bearing-only (2-drone) hyperbola + wedge
+      fixKind: "point",       // "point" | "bearing"
+      hyperbola: [],          // projected arc points [{x,y}]
+      wedge: [],              // projected MC hull points [{x,y}]
+      wedgeAlpha: 0,          // 0..1
       sonars: [],
       mode: "localize",
       localizations: [],
@@ -1518,6 +1743,18 @@
       sandboxFetching: false,
       sandboxFetchTimer: 0,   // debounce countdown (ms)
       sandboxLabel: "gunshot"
+    };
+
+    // ── Session 16 — Mesh bandwidth session state ─────────────────────────
+    // The server is stateless; we accumulate totals locally per session.
+    const bwSession = {
+      mesh_bytes:   0,
+      json_bytes:   0,
+      activatedSet: new Set(),   // scenario keys already counted
+      lastPacket:   null,        // { kind, mesh_bytes, json_bytes, hex_mesh, json_text, scenario }
+      extrapolation: null,       // from server
+      popoverOpen:  false,
+      serverData:   null,        // full /api/mesh/bandwidth response
     };
 
     // ─── Canvas ───────────────────────────────────────────────────────────
@@ -1611,46 +1848,22 @@
       return CLASS_COLOR[label] || '#e8a838';
     }
 
-    // ─── Session 14 — source entity helpers ──────────────────────────────
-
-    // Spawn (or update) the persistent source icon at the true/estimated source position.
-    // The icon appears at DETECT start and persists until reset/scenario change.
-    function spawnSourceEntity(cur) {
-      const tgt   = projectTarget(cur.target, cur.bounds);
-      const id    = `source-${cur.target.id}`;
-      const type  = cur.target.type; // already accounts for false_alarm
-      const label = cur.entry?.label || cur.target.label || 'unknown';
-      const color = labelColor(label);
-
-      let el = entityEls.get(id);
-      if (!el) {
-        // Colorize the SVG by substituting the default hostile-red tones
-        const rawSvg  = ICONS[type] || ICONS.unknown;
-        const colored = rawSvg
-          .replace(/#e85c4a/g, color)
-          .replace(/#c44a3a/g, color)
-          .replace(/#ff8a70/g, color);
-        el = document.createElement("div");
-        el.className  = "entity source blink";
-        el.dataset.id = id;
-        el.innerHTML  = `${colored}<span class="label"></span>`;
-        el.style.setProperty("--src-glow", color);
-        entityLayer.appendChild(el);
-        entityEls.set(id, el);
-      }
-      const pt = normToPixel(tgt.x, tgt.y);
-      el.style.left = `${pt.x}px`;
-      el.style.top  = `${pt.y}px`;
-      el.querySelector(".label").textContent = `[${label.toUpperCase()}]`;
+    // ─── Target entity helpers (hostile marker on map) ─────────────────────
+    function targetEntityId(cur) {
+      return `target-${cur.target.id}`;
     }
 
-    function clearSourceEntity() {
-      if (!state.frames.length) return;
-      const cur = state.frames[state.scenarioIndex];
-      if (!cur) return;
-      const srcId = `source-${cur.target.id}`;
-      const srcEl = entityEls.get(srcId);
-      if (srcEl) { srcEl.remove(); entityEls.delete(srcId); }
+    function curTargetNorm(cur) {
+      return projectTarget(cur.target, cur.bounds);
+    }
+
+    function purgeSourceEntities() {
+      for (const [id, el] of [...entityEls.entries()]) {
+        if (id.startsWith("source-")) {
+          el.remove();
+          entityEls.delete(id);
+        }
+      }
     }
 
     // ─── Session 14 — phase subtitle ─────────────────────────────────────
@@ -1748,7 +1961,11 @@
               type:  sc.falseAlarm ? "false_alarm" : (LABEL_TO_ICON[entry.label] || "unknown"),
               label: sc.falseAlarm ? "FALSE ALARM" : (entry.label_human || entry.label || "unknown")
             },
-            cloudLatLon: entry.cloud_latlon || []
+            cloudLatLon:      entry.cloud_latlon || [],
+            // Session 11 — bearing-only fix fields
+            fixKind:          entry.fix_kind || "point",
+            hyperbolaLatLon:  entry.hyperbola_latlon || [],
+            wedgeLatLon:      entry.wedge_latlon || []
           };
         })
         .filter(Boolean);
@@ -1811,67 +2028,41 @@
       ctx.stroke();
     }
 
-    function drawCepCircle() {
-      if (state.cloudAlpha <= 0) return;
-      const cur = state.frames[state.scenarioIndex];
-      if (!cur) return;
-      const e = cur.entry;
-      if (!e.cep50_m) return;
-
-      const a = state.cloudAlpha;
-
-      // Source position in canvas pixels
-      const srcN  = latLonToNorm(e.source.lat, e.source.lon, cur.bounds);
-      const srcPx = normToPixel(srcN.x, srcN.y);
-
-      // Convert CEP50 metres → pixels via lat offset (1° lat ≈ 111,000 m)
-      const latPerM  = 1 / 111000;
-      const offN     = latLonToNorm(e.source.lat + e.cep50_m * latPerM, e.source.lon, cur.bounds);
-      const offPx    = normToPixel(offN.x, offN.y);
-      const r50      = Math.abs(offPx.y - srcPx.y);
-
-      // CEP50 dashed circle
-      ctx.save();
-      ctx.setLineDash([5, 4]);
-      ctx.lineWidth   = 1.5;
-      ctx.strokeStyle = `rgba(232, 92, 74, ${0.80 * a})`;
+    // Session 11 — draw MC uncertainty wedge (hull polygon) for 2-drone bearing fix
+    function drawWedge() {
+      if (!state.wedge || state.wedge.length < 3 || state.wedgeAlpha <= 0) return;
+      const a = state.wedgeAlpha;
       ctx.beginPath();
-      ctx.arc(srcPx.x, srcPx.y, r50, 0, Math.PI * 2);
-      ctx.stroke();
-
-      // CEP95 outer ring (faint), if available
-      if (e.cep95_m_approx) {
-        const offN95 = latLonToNorm(e.source.lat + e.cep95_m_approx * latPerM, e.source.lon, cur.bounds);
-        const offPx95 = normToPixel(offN95.x, offN95.y);
-        const r95 = Math.abs(offPx95.y - srcPx.y);
-        ctx.setLineDash([3, 6]);
-        ctx.lineWidth   = 1.0;
-        ctx.strokeStyle = `rgba(232, 92, 74, ${0.30 * a})`;
-        ctx.beginPath();
-        ctx.arc(srcPx.x, srcPx.y, r95, 0, Math.PI * 2);
-        ctx.stroke();
+      for (let i = 0; i < state.wedge.length; i++) {
+        const p  = state.wedge[i];
+        const pt = normToPixel(p.x, p.y);
+        if (i === 0) ctx.moveTo(pt.x, pt.y);
+        else         ctx.lineTo(pt.x, pt.y);
       }
+      ctx.closePath();
+      ctx.fillStyle   = `rgba(232, 168, 56, ${0.15 * a})`;
+      ctx.strokeStyle = `rgba(232, 168, 56, ${0.40 * a})`;
+      ctx.lineWidth   = 1.5;
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    // Session 11 — draw deterministic hyperbola arc for 2-drone bearing fix
+    function drawHyperbola() {
+      if (!state.hyperbola || state.hyperbola.length < 2 || state.wedgeAlpha <= 0) return;
+      const a = state.wedgeAlpha;
+      ctx.beginPath();
+      for (let i = 0; i < state.hyperbola.length; i++) {
+        const p  = state.hyperbola[i];
+        const pt = normToPixel(p.x, p.y);
+        if (i === 0) ctx.moveTo(pt.x, pt.y);
+        else         ctx.lineTo(pt.x, pt.y);
+      }
+      ctx.strokeStyle = `rgba(255, 200, 60, ${0.85 * a})`;
+      ctx.lineWidth   = 2;
+      ctx.setLineDash([8, 5]);
+      ctx.stroke();
       ctx.setLineDash([]);
-
-      // Crosshair at estimated center
-      const cs = 7;
-      ctx.lineWidth   = 1.5;
-      ctx.strokeStyle = `rgba(232, 92, 74, ${0.90 * a})`;
-      ctx.beginPath();
-      ctx.moveTo(srcPx.x - cs, srcPx.y); ctx.lineTo(srcPx.x + cs, srcPx.y);
-      ctx.moveTo(srcPx.x, srcPx.y - cs); ctx.lineTo(srcPx.x, srcPx.y + cs);
-      ctx.stroke();
-
-      // CEP50 label
-      ctx.font      = `bold 9px 'JetBrains Mono', monospace`;
-      ctx.textAlign = "left";
-      ctx.fillStyle = `rgba(232, 92, 74, ${0.90 * a})`;
-      ctx.fillText(`CEP50 ${e.cep50_m}m`, srcPx.x + r50 + 6, srcPx.y - 3);
-      if (e.cep95_m_approx) {
-        ctx.fillStyle = `rgba(232, 92, 74, ${0.45 * a})`;
-        ctx.fillText(`95%  ${e.cep95_m_approx}m`, srcPx.x + r50 + 6, srcPx.y + 9);
-      }
-      ctx.restore();
     }
 
     function drawPulses() {
@@ -1924,24 +2115,6 @@
 
     function renderEntities() {
       const active = new Set();
-
-      // ── Preserve + reposition source entity (Session 14) ────────────────
-      // The source entity is spawned inside tickStep and must survive frame-to-frame;
-      // if we don't add its id to `active` here, removeStaleEntities would prune it.
-      if (state.frames.length) {
-        const cur   = state.frames[state.scenarioIndex];
-        const srcId = `source-${cur.target.id}`;
-        if (entityEls.has(srcId)) {
-          active.add(srcId);
-          // Re-project position each frame so it stays on the correct geo coordinate
-          // even after a map resize or fitBounds call.
-          const tgt = projectTarget(cur.target, cur.bounds);
-          const el  = entityEls.get(srcId);
-          const pt  = normToPixel(tgt.x, tgt.y);
-          el.style.left = `${pt.x}px`;
-          el.style.top  = `${pt.y}px`;
-        }
-      }
 
       for (const d of state.drones) {
         const id = `drone-${d.id}`;
@@ -2017,8 +2190,9 @@
         const missionSec = Math.floor(state.missionMs / 1000);
         const mm = String(Math.floor(missionSec / 60)).padStart(2, "0");
         const ss = String(missionSec % 60).padStart(2, "0");
+        const cepStr = e.cep50_m != null ? `CEP50 ${e.cep50_m}m` : "bearing-only fix";
         document.getElementById("coords").textContent =
-          `T+${mm}:${ss} · ${e.label_human || e.label} · CEP50 ${e.cep50_m}m`;
+          `T+${mm}:${ss} · ${e.label_human || e.label} · ${cepStr}`;
       }
     }
 
@@ -2051,7 +2225,26 @@
     }
 
     // ─── Camera feed helpers ──────────────────────────────────────────────
+    const RECON_FEED_DEFAULT = "assets/recon-feed.jpg";
+    const RECON_FEED_BY_SCENARIO = {
+      0: "assets/missile_launch_forest.png",   // scenario_missile_mix.wav
+      1: "assets/gunshot_tank_forest.png",     // scenario_tank_mix.wav
+      2: "assets/soldier_shooting_forest.png", // scenario_gunshot_mix.wav
+      3: "assets/bird_forest_large.png",       // scenario_bird_preprocessed.wav
+      4: "assets/forest_only.png",             // scenario_gunshot_preprocessed.wav
+    };
+
+    function reconFeedImageSrc(scenarioIndex) {
+      return RECON_FEED_BY_SCENARIO[scenarioIndex] ?? RECON_FEED_DEFAULT;
+    }
+
+    function updateReconFeedImage(scenarioIndex) {
+      document.getElementById("reconFeedImg").src =
+        reconFeedImageSrc(scenarioIndex ?? state.scenarioIndex);
+    }
+
     function showReconFeed(frame) {
+      updateReconFeedImage(state.scenarioIndex);
       const el = document.getElementById("reconFeed");
       el.classList.add("visible");
       // Update coordinate overlay from the source lat/lon
@@ -2150,26 +2343,16 @@
         delete ss.feedShown;
         delete ss.respondProgressMs;
         delete ss.completeLogged;
-        // Session 14: clear source outcome effects
-        delete ss.decidePulseSource;
-        delete ss.sourceNeutralized;
-        delete ss.sourceReconBadged;
-        if (cur) {
-          const srcEl = entityEls.get(`source-${cur.target.id}`);
-          if (srcEl) srcEl.classList.remove("neutralized-src", "recon-badge");
-        }
+        delete ss.decidePulseTarget;
       }
       if (leaving === "localize") {
         delete ss.localizeLogged;
-        delete ss.localizeStarted;
         state.cloudAlpha = 0;
         state.cloud      = [];
+        state.hyperbola  = [];
+        state.wedge      = [];
+        state.wedgeAlpha = 0;
         state.targets    = [];
-        // Session 14: re-add blink when reverting to DETECT
-        if (cur) {
-          const srcEl = entityEls.get(`source-${cur.target.id}`);
-          if (srcEl) srcEl.classList.add("blink");
-        }
       }
       if (leaving === "detect") {
         // Session 14: remove source entity entirely (reverting to PATROL)
@@ -2177,7 +2360,7 @@
         delete ss.lastRingEmitT;
         delete ss.droneArrivalP;
         delete ss.droneActivated;
-        clearSourceEntity();
+        purgeSourceEntities();
       }
       state.step--;
       state.stepT        = 0;
@@ -2187,7 +2370,7 @@
     }
 
     function setScenario(i) {
-      clearSourceEntity();   // Session 14: remove source icon before switching scenario
+      purgeSourceEntities();   // Session 14: remove source icon before switching scenario
       clearTargetStyles();
       hideRoeBanner();
       hideReconFeed();
@@ -2202,6 +2385,10 @@
       state.targets         = [];
       state.cloud           = [];
       state.cloudAlpha      = 0;
+      state.hyperbola       = [];
+      state.wedge           = [];
+      state.wedgeAlpha      = 0;
+      state.fixKind         = "point";
       const cur = state.frames[i];
       state.geoBounds = cur.bounds;
       syncMapView(cur.bounds);
@@ -2210,6 +2397,8 @@
       updatePhaseUI();
       syncSlidersToScenario();
       addLog(`Scenario ${i + 1}: ${cur.meta.title}`, "ok");
+      // Session 16: update mesh bandwidth strip for this scenario
+      fetchBandwidth(cur.entry ? cur.entry.scenario : null);
       // Auto-start: enable autoplay and advance past the instant patrol phase
       state.autoplay = true;
       document.getElementById("btnAuto").classList.add("auto-active");
@@ -2217,7 +2406,7 @@
     }
 
     function resetScenario() {
-      clearSourceEntity();   // Session 14: remove source icon on reset
+      purgeSourceEntities();   // Session 14: remove source icon on reset
       clearTargetStyles();
       hideRoeBanner();
       hideReconFeed();
@@ -2232,11 +2421,185 @@
       state.targets         = [];
       state.cloud           = [];
       state.cloudAlpha      = 0;
+      state.hyperbola       = [];
+      state.wedge           = [];
+      state.wedgeAlpha      = 0;
+      state.fixKind         = "point";
       const cur = state.frames[state.scenarioIndex];
       showScenarioIntro(cur, state.scenarioIndex, state.frames.length);
       updatePhaseUI();
       addLog("Reset to PATROL phase", "ok");
     }
+
+    // ── Session 16 — Mesh bandwidth helpers ──────────────────────────────────
+
+    function _fmtBytes(b) {
+      if (b === null || b === undefined) return "—";
+      if (b < 1024) return `${b} B`;
+      if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
+      return `${(b / 1024 / 1024).toFixed(2)} MB`;
+    }
+
+    function renderBwStrip() {
+      const row1El = document.getElementById("bwRow1");
+      const row2El = document.getElementById("bwRow2");
+      if (!row1El || !row2El) return;
+
+      if (!bwSession.lastPacket) {
+        row1El.textContent = "MESH — B  /  JSON — B  /  SAVED —%";
+        row2El.textContent = "loading…";
+        return;
+      }
+
+      const lp = bwSession.lastPacket;
+      const pct = lp.json_bytes > 0
+        ? Math.round(100 * (1 - lp.mesh_bytes / lp.json_bytes)) : 0;
+
+      row1El.innerHTML =
+        `MESH <strong>${_fmtBytes(lp.mesh_bytes)}</strong>` +
+        `&nbsp;/&nbsp;JSON ${_fmtBytes(lp.json_bytes)}` +
+        `&nbsp;/&nbsp;SAVED <span class="bw-pct">${pct}%</span>` +
+        `&nbsp; <span style="opacity:0.55;font-size:0.6rem">ⓘ</span>`;
+
+      const savedSoFar = bwSession.json_bytes - bwSession.mesh_bytes;
+      row2El.textContent =
+        `TOTAL ${_fmtBytes(bwSession.mesh_bytes)} sent` +
+        `  ·  ${_fmtBytes(savedSoFar)} saved`;
+    }
+
+    function renderBwPopover() {
+      const lp = bwSession.lastPacket;
+      if (!lp) return;
+
+      const kind = lp.kind === "loc_summary" ? "LOC SUMMARY" : "TACTICAL EVENT";
+      document.getElementById("mpPacketLabel").textContent =
+        `LAST PACKET · ${kind} · ${lp.scenario || ""}`;
+
+      document.getElementById("mpMeshBytes").textContent = `${lp.mesh_bytes} B`;
+      document.getElementById("mpJsonBytes").textContent = `${lp.json_bytes} B`;
+
+      // Format hex: group into rows of 8 bytes
+      const hexBytes = lp.hex_mesh.split(" ");
+      const hexRows = [];
+      for (let i = 0; i < hexBytes.length; i += 8) {
+        hexRows.push(hexBytes.slice(i, i + 8).join(" "));
+      }
+      document.getElementById("mpHexMesh").textContent = hexRows.join("\n");
+
+      // JSON snippet — truncate at ~300 chars with pretty line breaks
+      const jsonText = lp.json_text || "";
+      document.getElementById("mpHexJson").textContent =
+        jsonText.length > 380 ? jsonText.slice(0, 377) + "…" : jsonText;
+
+      // Bar chart — MESH bar is always 100% of the mesh-bar; JSON scaled relative
+      const totalM = bwSession.mesh_bytes;
+      const totalJ = bwSession.json_bytes;
+      const maxVal = Math.max(totalM, totalJ, 1);
+      document.getElementById("bwBarMesh").style.width = `${100 * totalM / maxVal}%`;
+      document.getElementById("bwBarJson").style.width = `${100 * totalJ / maxVal}%`;
+      document.getElementById("bwBarMeshVal").textContent = _fmtBytes(totalM);
+      document.getElementById("bwBarJsonVal").textContent = _fmtBytes(totalJ);
+
+      // Extrapolation
+      const ex = bwSession.extrapolation;
+      if (ex) {
+        const meshDay = ex.daily_mesh_kb < 1024
+          ? `${ex.daily_mesh_kb} KB` : `${(ex.daily_mesh_kb/1024).toFixed(1)} MB`;
+        const jsonDay = ex.daily_json_kb < 1024
+          ? `${ex.daily_json_kb} KB` : `${(ex.daily_json_kb/1024).toFixed(1)} MB`;
+        const perEvtPct = Math.round(100 * (1 - ex.per_event_mesh_b / ex.per_event_json_b));
+        document.getElementById("mpExtrap").innerHTML =
+          `Extrapolated @ <strong>${ex.events_per_hour.toLocaleString()}</strong> events/hr · 24 h: ` +
+          `<strong>${meshDay}/day</strong> mesh vs ${jsonDay}/day JSON ` +
+          `(<strong>${perEvtPct}%</strong> per-event saving). ` +
+          `Per packet: ${ex.per_event_mesh_b} B mesh vs ~${ex.per_event_json_b} B JSON. ` +
+          `Estimate only — actual field rates vary.`;
+      }
+    }
+
+    function openMeshPopover() {
+      bwSession.popoverOpen = true;
+      renderBwPopover();
+      document.getElementById("meshPopover").classList.add("visible");
+    }
+
+    function closeMeshPopover() {
+      bwSession.popoverOpen = false;
+      document.getElementById("meshPopover").classList.remove("visible");
+    }
+
+    function resetBwCounters() {
+      bwSession.mesh_bytes   = 0;
+      bwSession.json_bytes   = 0;
+      bwSession.activatedSet = new Set();
+      bwSession.lastPacket   = null;
+      renderBwStrip();
+      renderBwPopover();
+    }
+
+    async function fetchBandwidth(scenarioKey) {
+      try {
+        const url = `/api/mesh/bandwidth${scenarioKey ? `?scenario=${encodeURIComponent(scenarioKey)}` : ""}`;
+        const resp = await fetch(url);
+        if (!resp.ok) return;
+        const data = await resp.json();
+        bwSession.serverData   = data;
+        bwSession.extrapolation = data.extrapolation;
+
+        // Accumulate per-scenario deltas (count each scenario once per session)
+        if (scenarioKey && !bwSession.activatedSet.has(scenarioKey)) {
+          bwSession.activatedSet.add(scenarioKey);
+          const ps = (data.per_scenario || {})[scenarioKey];
+          if (ps) {
+            bwSession.mesh_bytes += ps.mesh_bytes || 0;
+            bwSession.json_bytes += ps.json_bytes || 0;
+          } else {
+            // Fallback: use per-event sample
+            const s = data.samples && data.samples.tactical;
+            if (s) {
+              bwSession.mesh_bytes += s.mesh_bytes || 0;
+              bwSession.json_bytes += s.json_bytes || 0;
+            }
+          }
+        } else if (!scenarioKey && bwSession.activatedSet.size === 0) {
+          // First load with no scenario — show grand totals
+          const t = data.total || {};
+          bwSession.mesh_bytes = t.mesh_bytes || 0;
+          bwSession.json_bytes = t.json_bytes || 0;
+        }
+
+        // Pick the best last_packet sample (prefer scenario match)
+        const samples = data.samples || {};
+        if (samples.tactical) {
+          bwSession.lastPacket = samples.tactical;
+        }
+
+        renderBwStrip();
+        if (bwSession.popoverOpen) renderBwPopover();
+      } catch (_) {
+        // Server not running in static mode — strip stays at "loading"
+      }
+    }
+
+    // Wire up popover open/close
+    document.getElementById("meshStrip").addEventListener("click", () => {
+      if (bwSession.popoverOpen) closeMeshPopover();
+      else openMeshPopover();
+    });
+    document.getElementById("meshPopClose").addEventListener("click", closeMeshPopover);
+    document.getElementById("bwResetBtn").addEventListener("click", resetBwCounters);
+
+    // Close popover when clicking outside
+    document.addEventListener("click", (e) => {
+      if (bwSession.popoverOpen &&
+          !document.getElementById("meshPopover").contains(e.target) &&
+          !document.getElementById("meshStrip").contains(e.target)) {
+        closeMeshPopover();
+      }
+    });
+
+    // Initial load (grand totals, no scenario hint)
+    fetchBandwidth(null);
 
     function tickStep(dt) {
       if (state.mode !== "localize" || !state.frames.length || state.paused) return;
@@ -2275,11 +2638,10 @@
         const proj = projectDrones(cur.drones, cur.bounds, ss.patrolT);
         state.drones = proj.map(d => ({ id: d.id, x: d.x, y: d.y, heading: 0 }));
 
-        // ── Session 14: spawn source icon at DETECT start ──────────────
+        // ── Session 14: acoustic detect (rings only; target icon from LOCALIZE) ─
         if (!ss.sourceSpawned && p > 0.02) {
           ss.sourceSpawned = true;
           ss.lastRingEmitT = 200; // emit first ring immediately
-          spawnSourceEntity(cur);
           addLog(`Acoustic signal · ${cur.shortName} · ${cur.entry.label || "unknown"} · listening…`, "warn");
         }
 
@@ -2317,17 +2679,24 @@
         }
 
       } else if (phase.id === "localize") {
-        state.geoBounds = cur.bounds;
+        state.geoBounds  = cur.bounds;
+        state.fixKind    = cur.fixKind || "point";
         const proj = projectDrones(cur.drones, cur.bounds);
         state.drones = proj.map(d => ({ id: d.id, x: d.x, y: d.y, heading: 0 }));
-        state.cloud      = projectCloud(cur.cloudLatLon, cur.bounds);
-        state.cloudAlpha = easeInOut(p);
 
-        // ── Session 14: stop blinking when localize starts ──────────────
-        if (!ss.localizeStarted) {
-          ss.localizeStarted = true;
-          const srcEl = entityEls.get(`source-${cur.target.id}`);
-          if (srcEl) srcEl.classList.remove("blink");
+        if (state.fixKind === "bearing") {
+          // 2-drone bearing fix: show hyperbola arc + MC wedge; no ellipse cloud
+          state.hyperbola  = projectCloud(cur.hyperbolaLatLon, cur.bounds);
+          state.wedge      = projectCloud(cur.wedgeLatLon, cur.bounds);
+          state.wedgeAlpha = easeInOut(p);
+          state.cloud      = [];
+          state.cloudAlpha = 0;
+        } else {
+          state.cloud      = projectCloud(cur.cloudLatLon, cur.bounds);
+          state.cloudAlpha = easeInOut(p);
+          state.hyperbola  = [];
+          state.wedge      = [];
+          state.wedgeAlpha = 0;
         }
 
         if (p > 0.4) {
@@ -2336,7 +2705,11 @@
             ss.localizeLogged = true;
             for (const d of state.drones) emitPulse(d.x, d.y, "rgba(79,216,122,0.35)");
             const e = cur.entry;
-            addLog(`TDOA · ${e.label_human || e.label} · CEP50 ${e.cep50_m}m · ${cur.shortName}`, "hostile");
+            if (state.fixKind === "bearing") {
+              addLog(`TDOA (2-drone) · ${e.label_human || e.label} · bearing-only fix · ${cur.shortName}`, "hostile");
+            } else {
+              addLog(`TDOA · ${e.label_human || e.label} · CEP50 ${e.cep50_m}m · ${cur.shortName}`, "hostile");
+            }
           }
         } else {
           state.targets = [];
@@ -2344,10 +2717,22 @@
 
       } else if (phase.id === "decide") {
         state.geoBounds  = cur.bounds;
+        state.fixKind    = cur.fixKind || "point";
         const proj = projectDrones(cur.drones, cur.bounds);
         state.drones = proj.map(d => ({ id: d.id, x: d.x, y: d.y, heading: 0 }));
-        state.cloud      = projectCloud(cur.cloudLatLon, cur.bounds);
-        state.cloudAlpha = 1;
+        if (state.fixKind === "bearing") {
+          state.hyperbola  = projectCloud(cur.hyperbolaLatLon, cur.bounds);
+          state.wedge      = projectCloud(cur.wedgeLatLon, cur.bounds);
+          state.wedgeAlpha = 1;
+          state.cloud      = [];
+          state.cloudAlpha = 0;
+        } else {
+          state.cloud      = projectCloud(cur.cloudLatLon, cur.bounds);
+          state.cloudAlpha = 1;
+          state.hyperbola  = [];
+          state.wedge      = [];
+          state.wedgeAlpha = 0;
+        }
         state.targets    = [projectTarget(cur.target, cur.bounds)];
         if (!ss.decideShown && p > 0.15) {
           ss.decideShown = true;
@@ -2366,18 +2751,14 @@
             showRoeBanner(`✕ HOLD FIRE · CEP50 ${e.cep50_m}m — GEOMETRY INSUFFICIENT`, "roe-hold");
           }
         }
-        // ── Session 14: source icon flash in action colour ──────────────
-        if (!ss.decidePulseSource && p > 0.10) {
-          ss.decidePulseSource = true;
-          const act2  = cur.entry.recommended_action || "HOLD";
-          const glow  = act2 === "STRIKE" ? "#e85c4a" : act2 === "RECON" ? "#e8a838" : act2 === "SEARCH" ? "#1e9af0" : "#6a9a78";
-          const srcEl = entityEls.get(`source-${cur.target.id}`);
-          if (srcEl) {
-            srcEl.style.setProperty("--src-glow", glow);
-            srcEl.style.transition = "opacity 0.12s ease";
-            srcEl.style.opacity    = "0.35";
+        if (!ss.decidePulseTarget && p > 0.10) {
+          ss.decidePulseTarget = true;
+          const tel = entityEls.get(targetEntityId(cur));
+          if (tel) {
+            tel.style.transition = "opacity 0.12s ease";
+            tel.style.opacity    = "0.35";
             setTimeout(() => {
-              if (srcEl) { srcEl.style.opacity = ""; srcEl.style.transition = ""; }
+              if (tel) { tel.style.opacity = ""; tel.style.transition = ""; }
             }, 220);
           }
         }
@@ -2386,10 +2767,22 @@
 
       } else if (phase.id === "respond") {
         state.geoBounds  = cur.bounds;
+        state.fixKind    = cur.fixKind || "point";
         const proj = projectDrones(cur.drones, cur.bounds);
         state.drones     = proj.map(d => ({ id: d.id, x: d.x, y: d.y, heading: 0 }));
-        state.cloud      = projectCloud(cur.cloudLatLon, cur.bounds);
-        state.cloudAlpha = 1;
+        if (state.fixKind === "bearing") {
+          state.hyperbola  = projectCloud(cur.hyperbolaLatLon, cur.bounds);
+          state.wedge      = projectCloud(cur.wedgeLatLon, cur.bounds);
+          state.wedgeAlpha = 1;
+          state.cloud      = [];
+          state.cloudAlpha = 0;
+        } else {
+          state.cloud      = projectCloud(cur.cloudLatLon, cur.bounds);
+          state.cloudAlpha = 1;
+          state.hyperbola  = [];
+          state.wedge      = [];
+          state.wedgeAlpha = 0;
+        }
         state.targets    = [projectTarget(cur.target, cur.bounds)];
 
         if (!ss.respondLogged) {
@@ -2442,16 +2835,19 @@
             }
           }, 200);
 
+          const cepTag = e.cep50_m != null ? `CEP50 ${e.cep50_m}m` : "bearing-only";
           if (fa) {
             addLog(`FALSE ALARM · ${cur.shortName} · misclassification confirmed`, "warn");
           } else if (act === "STRIKE") {
-            addLog(`STRIKE · ${e.label_human || e.label} · CEP50 ${e.cep50_m}m · weapons released`, "hostile");
+            addLog(`STRIKE · ${e.label_human || e.label} · ${cepTag} · weapons released`, "hostile");
+          } else if (act === "RECON" && e.fix_kind === "bearing") {
+            addLog(`RECON · ${e.label_human || e.label} · ${cepTag} · hyperbola locus — dispatching recon · ${cur.shortName}`, "warn");
           } else if (act === "RECON") {
-            addLog(`RECON · ${e.label_human || e.label} · CEP50 ${e.cep50_m}m · ${cur.shortName}`, "warn");
+            addLog(`RECON · ${e.label_human || e.label} · ${cepTag} · ${cur.shortName}`, "warn");
           } else if (act === "SEARCH") {
-            addLog(`SEARCH · ${e.label_human || e.label} · CEP50 ${e.cep50_m}m — sweeping sector`, "warn");
+            addLog(`SEARCH · ${e.label_human || e.label} · ${cepTag} — sweeping sector`, "warn");
           } else {
-            addLog(`HOLD · ${e.label_human || e.label} · CEP50 ${e.cep50_m}m · GDOP ${e.gdop} — fix too uncertain`, "hostile");
+            addLog(`HOLD · ${e.label_human || e.label} · ${cepTag} · GDOP ${e.gdop} — fix too uncertain`, "hostile");
           }
         }
 
@@ -2493,12 +2889,8 @@
 
           if (rd.strike && rd.t >= 1 && !rd.impacted) {
             rd.impacted = true;
-            const tId = `target-${cur.target.id}`;
-            const tel = entityEls.get(tId);
+            const tel = entityEls.get(targetEntityId(cur));
             if (tel) tel.classList.add("neutralized");
-            // ── Session 14: neutralized overlay on source icon ──────────
-            const srcEl = entityEls.get(`source-${cur.target.id}`);
-            if (srcEl) srcEl.classList.add("neutralized-src");
             for (let i = 0; i < 4; i++) {
               setTimeout(() => {
                 emitPulse(rd.toX, rd.toY, "rgba(232,92,74,0.7)");
@@ -2507,13 +2899,6 @@
             }
             addLog(`IMPACT · target neutralized · ${cur.shortName}`, "hostile");
             setTimeout(() => { state.targets = []; }, 1400);
-          }
-          // ── Session 14: camera badge on source icon for RECON ─────────
-          if (!ss.sourceReconBadged && ss.feedShown &&
-              cur.entry.recommended_action === "RECON") {
-            ss.sourceReconBadged = true;
-            const srcEl2 = entityEls.get(`source-${cur.target.id}`);
-            if (srcEl2) srcEl2.classList.add("recon-badge");
           }
         }
 
@@ -2577,6 +2962,7 @@
     function startStepEngine() {
       const n = state.frames.length;
       if (!n) return;
+      purgeSourceEntities();
       clearTargetStyles();
       hideRoeBanner();
       hideScenarioIntro();
@@ -3371,7 +3757,11 @@
       // (terrain is now the real Leaflet map underneath)
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      if (state.mode === "localize") { drawConfidenceCloud(); drawCepCircle(); }
+      if (state.mode === "localize") {
+        drawConfidenceCloud();   // point fix (3+ drone) ellipse cloud
+        drawWedge();             // bearing fix (2-drone) MC hull
+        drawHyperbola();         // bearing fix (2-drone) deterministic arc
+      }
       drawPulses();
       drawSandboxOverlay();
 

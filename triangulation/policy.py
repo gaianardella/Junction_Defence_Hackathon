@@ -94,6 +94,25 @@ class Decision:
     weapons_release_required: bool
 
 
+def bearing_decide(label: str | None) -> Decision:
+    """Decision for a 2-drone bearing-only (hyperbola locus) fix.
+
+    Without a resolved point we can never authorise a strike.  The action is
+    always RECON — we have a direction to investigate but not a coordinate.
+    Severity is inherited from the label so urgency ordering is preserved.
+    """
+    severity = LABEL_SEVERITY.get(label, "low")
+    return Decision(
+        action="RECON",
+        reason=(
+            "2-drone bearing-only fix; source position is on a hyperbola locus "
+            "— RECON required to resolve location before further action"
+        ),
+        severity=severity,
+        weapons_release_required=False,
+    )
+
+
 # ── Public API ────────────────────────────────────────────────────────────────
 
 def search_points(
@@ -234,7 +253,7 @@ def decide(
 def priority(
     label: str | None,
     recommended_action: Action,
-    cep50_m: float,
+    cep50_m: float | None,
     severity: str,
 ) -> float:
     """Numeric threat priority score (higher = more urgent).
@@ -248,8 +267,13 @@ def priority(
         score   = base + bonus - penalty
 
     The absolute values don't matter, only relative order across scenarios.
+    ``cep50_m`` may be ``None`` for bearing-only fixes; the penalty is zero
+    in that case (bearing fixes are still ranked by severity / action).
     """
     base = SEVERITY_BASE.get(severity, SEVERITY_BASE["low"])
     bonus = ACTION_BONUS.get(recommended_action, 0.0)
-    penalty = max(0.0, cep50_m - PRIORITY_CEP_PENALTY_FLOOR) * PRIORITY_CEP_PENALTY_PER_M
+    if cep50_m is None:
+        penalty = 0.0
+    else:
+        penalty = max(0.0, cep50_m - PRIORITY_CEP_PENALTY_FLOOR) * PRIORITY_CEP_PENALTY_PER_M
     return base + bonus - penalty
