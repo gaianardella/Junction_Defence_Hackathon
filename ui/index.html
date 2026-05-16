@@ -2599,9 +2599,14 @@
           bwSession.json_bytes = t.json_bytes || 0;
         }
 
-        // Pick the best last_packet sample (prefer scenario match)
+        // Pick the best last_packet sample — prefer the scenario-specific
+        // loc_summary (richer, one per scenario) then tactical.
         const samples = data.samples || {};
-        if (samples.tactical) {
+        if (samples.loc_summary && samples.loc_summary.scenario === scenarioKey) {
+          bwSession.lastPacket = samples.loc_summary;
+        } else if (samples.tactical && samples.tactical.scenario === scenarioKey) {
+          bwSession.lastPacket = samples.tactical;
+        } else if (samples.tactical) {
           bwSession.lastPacket = samples.tactical;
         }
 

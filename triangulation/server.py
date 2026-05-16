@@ -466,11 +466,14 @@ def _compute_bandwidth_data() -> dict:
             "tactical_packets": len(tactical_rows),
             "loc_packets":      len(loc_rows),
         },
+        # Public view — totals only (no last_* to keep payload small)
         "per_scenario": {
             sc: {k: v for k, v in ps.items()
                  if k not in ("last_tactical", "last_loc_summary")}
             for sc, ps in per_scenario.items()
         },
+        # Full view — includes last_* for per-scenario sample lookup
+        "_per_scenario_full": per_scenario,
         "samples": samples,
         "extrapolation": {
             "events_per_hour":   events_per_hour,
@@ -508,46 +511,45 @@ def api_mesh_bandwidth():
         return jsonify(data), 503
 
     scenario = request.args.get("scenario")
-    last_packet: dict | None = None
 
+    # Default samples: global first tactical + first loc_summary
+    base_samples = data.get("samples") or {}
+
+    # When a scenario key is supplied, override samples with that scenario's
+    # last packets so the UI strip and hex-dump popover reflect the current scene.
     if scenario:
-        # Try to find a representative packet for the popover
-        ps_map = data.get("per_scenario", {})
-        # Match by exact name or by prefix (strip .wav suffix variants)
-        match = ps_map.get(scenario)
-        if match is None:
-            for key in ps_map:
-                if key.rstrip(".wav") == scenario.rstrip(".wav") or scenario in key:
-                    match = ps_map.get(key)
+        full_ps = data.get("_per_scenario_full") or {}
+        # Exact match first; fall back to substring match
+        ps = full_ps.get(scenario)
+        if ps is None:
+            for key, val in full_ps.items():
+                if scenario in key or key in scenario:
+                    ps = val
                     break
-        # Grab last_tactical or last_loc_summary from the raw _bw_data
-        raw_per = _compute_bandwidth_data()   # re-uses cached internal state
-        raw_ps  = {}
-        # Re-fetch from the full per_scenario including last_* fields
-        # by re-running (cached) — just read the samples dict instead
-        samples = data.get("samples", {})
-        # Use the tactical sample from this scenario if available
-        # Fall back to global first sample
-        if scenario and raw_per.get("samples"):
-            last_packet = raw_per["samples"].get("tactical")
+        if ps:
+            sc_samples = {}
+            if ps.get("last_tactical"):
+                sc_samples["tactical"] = ps["last_tactical"]
+            if ps.get("last_loc_summary"):
+                sc_samples["loc_summary"] = ps["last_loc_summary"]
+            if sc_samples:
+                base_samples = {**base_samples, **sc_samples}
 
-    # Build a clean response — strip large json_text from per_scenario to keep
-    # the response light; the popover fetches the specific hex via samples.
+    # Build a clean response — truncate json_text to keep payload small.
     response = {
         "total":         data["total"],
         "per_scenario":  data["per_scenario"],
         "extrapolation": data["extrapolation"],
-        "last_packet":   last_packet,
         "samples": {
             kind: {
                 "kind":       s["kind"],
                 "mesh_bytes": s["mesh_bytes"],
                 "json_bytes": s["json_bytes"],
                 "hex_mesh":   s["hex_mesh"],
-                "json_text":  s["json_text"][:400],  # truncate for wire
+                "json_text":  s["json_text"][:400],
                 "scenario":   s["scenario"],
             }
-            for kind, s in (data.get("samples") or {}).items()
+            for kind, s in base_samples.items()
             if s is not None
         },
     }
