@@ -85,8 +85,8 @@
       background: rgba(0, 0, 0, 0.3);
     }
 
-    /* WebSocket panel + CONNECT/DEMO — dev only (hidden on Render / public deploy) */
-    html:not(.dev-host) .ws-dev-only { display: none !important; }
+    /* WebSocket panel + CONNECT/DEMO — hidden (use loadLocalizations on startup) */
+    .ws-dev-only { display: none !important; }
 
     .status-dot {
       width: 8px;
@@ -1300,14 +1300,6 @@
   </style>
 </head>
 <body>
-  <script>
-    (function () {
-      const h = location.hostname;
-      const forceProd = new URLSearchParams(location.search).has("prod");
-      if (!forceProd && (h === "localhost" || h === "127.0.0.1"))
-        document.documentElement.classList.add("dev-host");
-    })();
-  </script>
   <div class="hud">
     <header>
       <div>
@@ -4067,7 +4059,7 @@
 
     // ?ws=ws://192.168.1.10:8765 auto-connect (dev hosts only)
     const params = new URLSearchParams(location.search);
-    if (params.get("ws") && document.documentElement.classList.contains("dev-host")) {
+    if (params.get("ws") && params.get("dev") === "1") {
       document.getElementById("wsUrl").value = params.get("ws");
       connectWs();
     }
