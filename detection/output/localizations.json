@@ -646,12 +646,12 @@
         17.6
       ]
     },
-    "recommended_action": "RECON",
-    "recommended_action_reason": "CEP50 88.6m exceeds limit 10.0m; GDOP 6.01 exceeds limit 3.0",
+    "recommended_action": "STRIKE",
+    "recommended_action_reason": "label 'gunshot' is unconditionally strike-authorised (CEP50 88.6m, GDOP 6.01)",
     "recommended_action_severity": "medium",
-    "weapons_release_required": false,
+    "weapons_release_required": true,
     "source_mgrs": null,
-    "threat_priority": 36.413,
+    "threat_priority": 46.413,
     "scenario_variant": "clean",
     "jam_status_per_drone": null,
     "priority_rank": 5
@@ -1960,12 +1960,12 @@
         15.1
       ]
     },
-    "recommended_action": "RECON",
-    "recommended_action_reason": "CEP50 15.7m exceeds limit 10.0m",
+    "recommended_action": "STRIKE",
+    "recommended_action_reason": "label 'gunshot' is unconditionally strike-authorised (CEP50 15.7m, GDOP 1.85)",
     "recommended_action_severity": "medium",
-    "weapons_release_required": false,
+    "weapons_release_required": true,
     "source_mgrs": null,
-    "threat_priority": 58.294,
+    "threat_priority": 68.294,
     "scenario_variant": "clean",
     "jam_status_per_drone": null,
     "priority_rank": 4

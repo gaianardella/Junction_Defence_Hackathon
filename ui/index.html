@@ -292,6 +292,27 @@
     }
     .entity.drone.recon-drone .label { color: var(--warn); }
 
+    /* ── Strike drone (red) ──────────────────────────────────── */
+    @keyframes strike-drone-fly {
+      0%,100% { filter: hue-rotate(175deg) saturate(1.6) drop-shadow(0 0 6px rgba(232,92,74,0.6)); }
+      50%     { filter: hue-rotate(175deg) saturate(1.6) drop-shadow(0 0 16px rgba(232,92,74,1.0)); }
+    }
+    .entity.drone.strike-drone svg {
+      animation: strike-drone-fly 0.85s ease-in-out infinite;
+    }
+    .entity.drone.strike-drone .label { color: var(--hostile); }
+
+    /* ── Neutralized target ───────────────────────────────────── */
+    @keyframes neutralize {
+      0%   { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+      40%  { opacity: 1; transform: translate(-50%,-50%) scale(1.8); }
+      100% { opacity: 0; transform: translate(-50%,-50%) scale(0.2); }
+    }
+    .entity.hostile.neutralized {
+      animation: neutralize 1.2s ease-in forwards;
+      pointer-events: none;
+    }
+
     .entity.hostile.false-alarm-marker svg {
       animation: false-alarm-pulse 2s ease-in-out infinite;
     }
@@ -1023,7 +1044,8 @@
         const el = entityEls.get(id);
         if (el) {
           if (d.heading != null) el.dataset.heading = d.heading;
-          el.classList.toggle("recon-drone", !!d.recon);
+          el.classList.toggle("recon-drone",  !!d.recon);
+          el.classList.toggle("strike-drone", !!d.strike);
         }
       }
       for (const t of state.targets) {
@@ -1119,9 +1141,10 @@
     // ─── Clear RECON/false-alarm CSS from all target entities ─────────────
     function clearTargetStyles() {
       for (const [, el] of entityEls) {
-        if (el.classList.contains("hostile")) {
-          el.classList.remove("recon-scanning", "false-alarm-marker");
-        }
+        if (el.classList.contains("hostile"))
+          el.classList.remove("recon-scanning", "false-alarm-marker", "neutralized");
+        if (el.classList.contains("drone"))
+          el.classList.remove("recon-drone", "strike-drone");
       }
     }
 
@@ -1236,8 +1259,8 @@
           const act = e.recommended_action || "HOLD";
           const fa  = cur.meta.falseAlarm;
 
-          // Pick the nearest drone to the target as the recon responder
-          if (!fa && act === "RECON") {
+          // Pick the nearest drone to the target as the responder
+          if (!fa && (act === "RECON" || act === "STRIKE")) {
             const tgt = state.targets[0];
             let closest = state.drones[0];
             let bestDist = Infinity;
@@ -1249,7 +1272,9 @@
               id: closest.id,
               fromX: closest.x, fromY: closest.y,
               toX: tgt.x, toY: tgt.y,
-              t: 0
+              t: 0,
+              strike: act === "STRIKE",
+              impacted: false
             };
           }
 
@@ -1263,6 +1288,7 @@
               } else if (act === "RECON") {
                 tel.classList.add("recon-scanning");
               }
+              // STRIKE: target styling applied on impact (see reconDrone animation)
             }
           }, 200);
 
@@ -1270,6 +1296,9 @@
           if (fa) {
             showRoeBanner("⚠ FALSE ALARM — NO ACTION TAKEN", "roe-false");
             addLog(`FALSE ALARM · ${cur.shortName} · misclassification confirmed`, "warn");
+          } else if (act === "STRIKE") {
+            showRoeBanner(`⚔ STRIKE AUTHORIZED · ${e.label_human || e.label}`, "roe-hold");
+            addLog(`STRIKE · ${e.label_human || e.label} · CEP50 ${e.cep50_m}m · weapons released`, "hostile");
           } else if (act === "RECON") {
             showRoeBanner(`▶ RECON ORDERED · ${e.label_human || e.label}`, "roe-recon");
             addLog(`RECON · ${e.label_human || e.label} · CEP50 ${e.cep50_m}m · ${cur.shortName}`, "warn");
@@ -1285,7 +1314,7 @@
         if (Math.random() < 0.015)
           emitPulse(state.targets[0].x, state.targets[0].y, "rgba(232, 92, 74, 0.25)");
 
-        // Animate recon drone flying toward the target
+        // Animate responder drone flying toward the target
         if (pb.reconDrone) {
           const rd = pb.reconDrone;
           rd.t = Math.min(1, rd.t + dt / 5500);
@@ -1295,11 +1324,34 @@
           const hdg = headingDeg({ x: rd.fromX, y: rd.fromY }, { x: rd.toX, y: rd.toY });
           state.drones = state.drones.map((d) =>
             d.id === rd.id
-              ? { ...d, x: rx, y: ry, heading: hdg, recon: true }
+              ? { ...d, x: rx, y: ry, heading: hdg,
+                  recon: !rd.strike, strike: rd.strike }
               : d
           );
-          if (rd.t < 1 && Math.random() < 0.035)
-            emitPulse(rx, ry, "rgba(232,168,56,0.4)");
+          const trailColor = rd.strike
+            ? "rgba(232,92,74,0.45)"
+            : "rgba(232,168,56,0.4)";
+          if (rd.t < 1 && Math.random() < 0.04)
+            emitPulse(rx, ry, trailColor);
+
+          // Impact: drone reaches target on a STRIKE run
+          if (rd.strike && rd.t >= 1 && !rd.impacted) {
+            rd.impacted = true;
+            // Neutralize the target entity
+            const tId = `target-${cur.target.id}`;
+            const tel = entityEls.get(tId);
+            if (tel) tel.classList.add("neutralized");
+            // Explosion pulses
+            for (let i = 0; i < 4; i++) {
+              setTimeout(() => {
+                emitPulse(rd.toX, rd.toY, "rgba(232,92,74,0.7)");
+                emitPulse(rd.toX, rd.toY, "rgba(255,200,100,0.5)");
+              }, i * 180);
+            }
+            addLog(`IMPACT · target neutralized · ${cur.shortName}`, "hostile");
+            // Remove target from state after animation
+            setTimeout(() => { state.targets = []; }, 1400);
+          }
         }
         // hold never auto-advances — waits for btnNext click
       }

@@ -68,6 +68,10 @@ ACTION_BONUS: dict[str, float] = {
 PRIORITY_CEP_PENALTY_PER_M: float = 0.3
 PRIORITY_CEP_PENALTY_FLOOR: float = 10.0
 
+# Labels that always get STRIKE once confidence is above the HOLD floor,
+# regardless of CEP50 / GDOP thresholds.
+ALWAYS_STRIKE_LABELS: tuple[str, ...] = ("gunshot",)
+
 # ── Types ────────────────────────────────────────────────────────────────────
 
 Action = Literal["STRIKE", "RECON", "HOLD"]
@@ -123,6 +127,18 @@ def decide(
                    f"{HOLD_CONFIDENCE_FLOOR}",
             severity=severity,
             weapons_release_required=False,
+        )
+
+    # 1b. Always-strike labels — bypass CEP50/GDOP envelope.
+    if label in ALWAYS_STRIKE_LABELS:
+        return Decision(
+            action="STRIKE",
+            reason=(
+                f"label '{label}' is unconditionally strike-authorised "
+                f"(CEP50 {cep50_m:.1f}m, GDOP {gdop:.2f})"
+            ),
+            severity=severity,
+            weapons_release_required=True,
         )
 
     # 2. Strike envelope check.
