@@ -13,7 +13,8 @@ data/ESC-50/
 data/DCASE2017/
 data/archives/
 data/freesound/
-data/samples/
+# data/samples/ is tracked (source clips for build_scenarios)
+data/samples/negative/
 
 # Nested dataset repos
 data/ESC-50/.git/
