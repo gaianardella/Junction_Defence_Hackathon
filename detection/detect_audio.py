@@ -37,9 +37,6 @@ DRONE_REF_PATH = SAMPLES_DIR / "drone" / "uas_drone_pass_dcpoke.wav"
 
 # Below this ratio, “tank” is often rotor + forest only (no real tank in the mix)
 TANK_COMPARATIVE_MIN_RATIO = 1.05
-TANK_MAJORITY_FRAC = 0.68
-
-AMBIENT_SCENARIO_KEYS = ("scenario_bird", "scenario_crickets", "scenario_dog")
 
 CATEGORIES = ("gunshot", "missile_launch", "drone", "tank")
 CATEGORY_LABELS = {
@@ -68,6 +65,8 @@ def _cancel_wind_noise(audio, sr):
 MIN_RMS = 0.002
 MIN_PEAK_ENERGY = 0.006
 GUNSHOT_PEAK_RATIO = 4.0
+GUNSHOT_PROMINENT_PEAK_RATIO = GUNSHOT_PEAK_RATIO * 1.65
+GUNSHOT_RECOVERY_PEAK_RATIO = GUNSHOT_PEAK_RATIO * 1.02
 GUNSHOT_CREST_MIN = 3.0
 GUNSHOT_SPIKE_MAX_S = 0.12
 MISSILE_PEAK_RATIO_MIN = 1.75
@@ -300,6 +299,160 @@ def _comparative_tank_ratio(mixture: np.ndarray, sr: int) -> float:
     return _bandpass_tank_rms(clean_mix, sr) / (_bandpass_tank_rms(clean_drone, sr) + 1e-12)
 
 
+def _bird_like_chatter(audio: np.ndarray, sr: int) -> bool:
+    f = _energy_features(audio, sr)
+    if f is None:
+        return False
+    return (
+        f["high_freq_ratio"] >= 0.28
+        and f["crest"] >= 2.8
+        and f["peak_ratio"] < GUNSHOT_PROMINENT_PEAK_RATIO
+    )
+
+
+def _insect_ambient_profile(audio: np.ndarray, sr: int) -> bool:
+    """Sustained HF texture (crickets/insects), not a gunshot envelope."""
+    f = _energy_features(audio, sr)
+    if f is None:
+        return False
+    return (
+        f["high_freq_ratio"] >= 0.22
+        and f["sustained"] >= 0.30
+        and f["crest"] < 5.5
+        and f["peak_ratio"] < GUNSHOT_PEAK_RATIO * 1.1
+    )
+
+
+def _missile_window_ok(clean: np.ndarray, sr: int) -> bool:
+    label, _ = classify_missile_launch(clean, sr)
+    if label != "missile_launch":
+        return False
+    feat = _energy_features(clean, sr)
+    if feat is None:
+        return False
+    spike_med = _spike_duration(feat, ratio=3.0)
+    return spike_med >= MISSILE_SPIKE_MIN_S or (
+        feat["mid_freq_ratio"] >= MISSILE_MID_FREQ_MIN and feat["sustained"] < 0.45
+    )
+
+
+def _gunshot_at_peak(audio: np.ndarray, sr: int) -> bool:
+    frame = int(sr * 0.01)
+    if len(audio) < frame * 4:
+        return False
+    energy = np.array([
+        np.sqrt(np.mean(audio[i:i + frame] ** 2))
+        for i in range(0, len(audio) - frame, frame)
+    ])
+    ws = int(WINDOW_SIZE * sr)
+    center = float(np.argmax(energy) * 0.01)
+    start = max(0, int((center - WINDOW_SIZE / 2) * sr))
+    chunk = audio[start:start + ws]
+    if len(chunk) < ws:
+        chunk = np.pad(chunk, (0, ws - len(chunk)))
+    return _gunshot_window_ok(_cancel_wind_noise(chunk, sr), sr)
+
+
+def _gunshot_window_ok(clean: np.ndarray, sr: int) -> bool:
+    label, _ = classify_gunshot(clean, sr)
+    if label != "gunshot":
+        return False
+    feat = _energy_features(clean, sr)
+    if feat is None:
+        return False
+    return _spike_duration(feat) <= GUNSHOT_SPIKE_MAX_S
+
+
+def _has_confirmed_gunshot(audio: np.ndarray, sr: int, n_peaks: int = 10) -> bool:
+    """Short impulsive gunshot in mix (onset peaks or sliding windows)."""
+    ws = int(WINDOW_SIZE * sr)
+    hop = int(HOP_SIZE * sr)
+
+    for start in range(0, len(audio) - ws, hop):
+        chunk = audio[start:start + ws]
+        if _gunshot_window_ok(_cancel_wind_noise(chunk, sr), sr):
+            return True
+
+    frame = int(sr * 0.02)
+    if len(audio) < frame * 4:
+        return False
+    energy = np.array([
+        np.sqrt(np.mean(audio[i:i + frame] ** 2))
+        for i in range(0, len(audio) - frame, frame)
+    ])
+    onset = np.maximum(0.0, np.diff(energy, prepend=energy[0]))
+    threshold = float(np.percentile(onset, 85))
+
+    for idx in np.argsort(onset)[-n_peaks:]:
+        if onset[idx] < threshold:
+            continue
+        center = idx * 0.02
+        start = max(0, int((center - WINDOW_SIZE / 2) * sr))
+        chunk = audio[start:start + ws]
+        if len(chunk) < ws:
+            chunk = np.pad(chunk, (0, ws - len(chunk)))
+        if _gunshot_window_ok(_cancel_wind_noise(chunk, sr), sr):
+            return True
+    return _gunshot_at_peak(audio, sr)
+
+
+def _gunshot_prominent_in_mix(
+    audio: np.ndarray, sr: int, *, min_ratio: float = GUNSHOT_PROMINENT_PEAK_RATIO,
+) -> bool:
+    """Strong gunshot-scale impulse (vs weak chirps in UAV+forest)."""
+    ws = int(WINDOW_SIZE * sr)
+    hop = int(HOP_SIZE * sr)
+    best = 0.0
+    for start in range(0, len(audio) - ws, hop):
+        clean = _cancel_wind_noise(audio[start:start + ws], sr)
+        label, _ = classify_gunshot(clean, sr)
+        if label != "gunshot":
+            continue
+        feat = _energy_features(clean, sr)
+        if feat:
+            best = max(best, feat["peak_ratio"])
+    return best >= min_ratio
+
+
+def _has_confirmed_missile(audio: np.ndarray, sr: int, n_peaks: int = 10) -> bool:
+    ws = int(WINDOW_SIZE * sr)
+    hop = int(HOP_SIZE * sr)
+
+    for start in range(0, len(audio) - ws, hop):
+        chunk = audio[start:start + ws]
+        if _missile_window_ok(_cancel_wind_noise(chunk, sr), sr):
+            return True
+
+    frame = int(sr * 0.02)
+    if len(audio) < frame * 4:
+        return False
+    energy = np.array([
+        np.sqrt(np.mean(audio[i:i + frame] ** 2))
+        for i in range(0, len(audio) - frame, frame)
+    ])
+    onset = np.maximum(0.0, np.diff(energy, prepend=energy[0]))
+    threshold = float(np.percentile(onset, 85))
+
+    for idx in np.argsort(onset)[-n_peaks:]:
+        if onset[idx] < threshold:
+            continue
+        center = idx * 0.02
+        start = max(0, int((center - WINDOW_SIZE / 2) * sr))
+        chunk = audio[start:start + ws]
+        if len(chunk) < ws:
+            chunk = np.pad(chunk, (0, ws - len(chunk)))
+        if _missile_window_ok(_cancel_wind_noise(chunk, sr), sr):
+            return True
+    return False
+
+
+def _rotor_texture_without_tank(audio: np.ndarray, sr: int, counts: Counter, n: int) -> bool:
+    """Many tank-like windows from UAV/forest but no tank-band boost vs drone-only."""
+    if n == 0 or counts["tank"] < n * 0.65:
+        return False
+    return _comparative_tank_ratio(audio, sr) < TANK_COMPARATIVE_MIN_RATIO
+
+
 def filter_military_relevance(
     label: str | None,
     counts: Counter,
@@ -317,8 +470,6 @@ def filter_military_relevance(
     if label == "tank":
         if counts["tank"] < n * 0.52:
             return None
-        if counts["tank"] >= n * TANK_MAJORITY_FRAC:
-            return label
         if _comparative_tank_ratio(audio, sr) < TANK_COMPARATIVE_MIN_RATIO:
             return None
         return label
@@ -328,14 +479,100 @@ def filter_military_relevance(
     return label
 
 
-def filter_ambient_scenario(label: str | None, counts: Counter, onset_types: list[str]) -> str | None:
-    """UAV + animal scenario files (scenario_bird_* …): no military alert."""
+def finalize_military_label(
+    label: str | None,
+    audio: np.ndarray,
+    sr: int,
+    counts: Counter,
+    onset_types: list[str] | None = None,
+) -> str | None:
+    """Acoustic-only relevance: reject UAV+forest false alarms; recover buried gunshot/missile."""
+    n = sum(counts.values()) or 1
+    rotor = _rotor_texture_without_tank(audio, sr, counts, n)
+    onset_counts = Counter(onset_types or [])
+
+    if label == "tank" and rotor:
+        label = None
+    cricket_gunshot_spam = (
+        counts["gunshot"] >= n * 0.35 and counts.get("tank", 0) < n * 0.12
+    )
+
+    if label == "gunshot":
+        if _bird_like_chatter(audio, sr) or _insect_ambient_profile(audio, sr):
+            label = None
+        elif cricket_gunshot_spam:
+            label = None
+        elif (
+            counts.get("tank", 0) >= n * 0.45
+            and counts["gunshot"] < max(4, int(n * 0.12))
+            and not _gunshot_prominent_in_mix(audio, sr, min_ratio=GUNSHOT_PEAK_RATIO * 1.75)
+        ):
+            label = None
+        elif (
+            counts.get("tank", 0) >= n * 0.80
+            and counts["gunshot"] <= 3
+            and onset_counts.get("gunshot", 0) >= 3
+        ):
+            label = None
+        elif (
+            rotor
+            and counts["gunshot"] < n * 0.10
+            and counts.get("tank", 0) >= n * 0.80
+        ):
+            label = None
+        elif rotor and counts["gunshot"] < max(4, int(n * 0.12)):
+            label = None
+        elif rotor and not _gunshot_prominent_in_mix(audio, sr):
+            label = None
+    if label == "missile_launch":
+        if rotor and not _has_confirmed_missile(audio, sr):
+            label = None
+        elif (
+            counts["missile_launch"] < max(4, int(n * 0.07))
+            and counts.get("tank", 0) >= n * 0.65
+            and counts["missile_launch"] <= counts.get("tank", 0) * 0.10
+        ):
+            label = None
+
+    if label is not None:
+        return label
+
+    chirp_gunshot_spam = (
+        counts.get("tank", 0) >= n * 0.80
+        and counts["gunshot"] <= 3
+        and onset_counts.get("gunshot", 0) >= 3
+    )
+    if chirp_gunshot_spam:
+        return None
+
+    sparse_uav = (
+        counts["gunshot"] < max(4, int(n * 0.12))
+        and counts.get("tank", 0) >= n * 0.45
+    )
+    allow_gunshot_recovery = True
+    if sparse_uav:
+        allow_gunshot_recovery = (
+            _has_confirmed_gunshot(audio, sr)
+            and _gunshot_prominent_in_mix(audio, sr, min_ratio=GUNSHOT_RECOVERY_PEAK_RATIO)
+        )
+    if (
+        allow_gunshot_recovery
+        and not cricket_gunshot_spam
+        and _gunshot_prominent_in_mix(audio, sr, min_ratio=GUNSHOT_RECOVERY_PEAK_RATIO)
+        and (_has_confirmed_gunshot(audio, sr) or _gunshot_at_peak(audio, sr))
+        and not _bird_like_chatter(audio, sr)
+        and not _insect_ambient_profile(audio, sr)
+    ):
+        return "gunshot"
+    if _has_confirmed_missile(audio, sr):
+        weak_missile = (
+            counts.get("tank", 0) >= n * 0.65
+            and counts["missile_launch"] <= 3
+            and counts.get("tank", 0) > counts["missile_launch"] * 14
+        )
+        if not weak_missile:
+            return "missile_launch"
     return None
-
-
-def _is_ambient_scenario_path(path: Path) -> bool:
-    name = path.name.lower()
-    return any(k in name for k in AMBIENT_SCENARIO_KEYS)
 
 
 def dominant_detection(detected_types, onset_types: list[str] | None = None):
@@ -369,8 +606,10 @@ def dominant_detection(detected_types, onset_types: list[str] | None = None):
 def classify_audio_array(audio, sr=SR):
     sliding = scan_audio_for_events(audio, sr)
     onsets = _scan_onset_windows(audio, sr)
+    counts = Counter(sliding)
     label = dominant_detection(sliding, onsets)
-    return filter_military_relevance(label, Counter(sliding), onsets, audio, sr)
+    label = filter_military_relevance(label, counts, onsets, audio, sr)
+    return finalize_military_label(label, audio, sr, counts, onsets)
 
 
 def classify_audio_file(audio_path, sr=SR):
@@ -384,10 +623,10 @@ def detect_file(path: Path, drone_id: str = "drone_1") -> dict:
     events = scan_audio_for_events(audio, sr)
     sliding = events
     onsets = _scan_onset_windows(audio, sr)
+    counts = Counter(sliding)
     label = dominant_detection(sliding, onsets)
-    label = filter_military_relevance(label, Counter(sliding), onsets, audio, sr)
-    if _is_ambient_scenario_path(path):
-        label = filter_ambient_scenario(label, Counter(sliding), onsets)
+    label = filter_military_relevance(label, counts, onsets, audio, sr)
+    label = finalize_military_label(label, audio, sr, counts, onsets)
 
     frame_length = int(sr * 0.01)
     energy = np.array([
