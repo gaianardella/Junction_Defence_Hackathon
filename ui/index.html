@@ -509,19 +509,6 @@
     .recon-feed .feed-corner.br { bottom: 0; right: 0;
       border-width: 0 1px 1px 0; }
 
-    /* ── NEXT button ─────────────────────────────────────────── */
-    @keyframes next-pulse {
-      0%,100% { box-shadow: 0 0 0 0 rgba(79,216,122,0); }
-      50%     { box-shadow: 0 0 0 6px rgba(79,216,122,0.3); }
-    }
-    #btnNext {
-      display: none;
-      animation: next-pulse 1.6s ease-in-out infinite;
-      background: rgba(79,216,122,0.18);
-      border-color: var(--accent);
-    }
-    #btnNext.visible { display: inline-block; }
-
     /* ── Target stack ────────────────────────────────────────── */
     .target-stack {
       display: flex;
@@ -586,6 +573,7 @@
     }
     .action-chip.strike { background: rgba(232,92,74,0.2);  color: var(--hostile); border: 1px solid rgba(232,92,74,0.4); }
     .action-chip.recon  { background: rgba(232,168,56,0.2); color: var(--warn);    border: 1px solid rgba(232,168,56,0.4); }
+    .action-chip.search { background: rgba(30,154,240,0.18);color: #1e9af0;        border: 1px solid rgba(30,154,240,0.4); }
     .action-chip.hold   { background: rgba(80,80,80,0.2);   color: var(--text-dim);border: 1px solid rgba(100,100,100,0.3); }
     .action-chip.fa     { background: rgba(79,216,122,0.1); color: var(--accent);  border: 1px solid rgba(79,216,122,0.3); }
 
@@ -703,6 +691,402 @@
       background: var(--accent);
       transition: width 0.08s linear;
     }
+
+    /* ── Scenario cards ─────────────────────────────────────────── */
+    .scenario-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      margin-bottom: 6px;
+    }
+    .sc-card {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      background: rgba(0,0,0,0.2);
+    }
+    .sc-card:hover { background: rgba(79,216,122,0.07); border-color: rgba(79,216,122,0.28); }
+    .sc-card.active { background: rgba(79,216,122,0.1); border-color: var(--accent); }
+    .sc-card-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .sc-num {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.55rem;
+      color: var(--text-dim);
+      flex-shrink: 0;
+    }
+    .sc-card.active .sc-num { color: var(--accent); }
+    .sc-title {
+      font-family: "Rajdhani", sans-serif;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text);
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .sc-card.active .sc-title { color: var(--accent); }
+    .sc-cep {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.5rem;
+      color: var(--text-dim);
+    }
+
+    /* ── Phase stepper pip bar ───────────────────────────────────── */
+    .phase-label-txt {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.58rem;
+      color: var(--accent);
+      letter-spacing: 0.08em;
+      margin: 8px 0 4px;
+    }
+    .phase-stepper {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      margin-bottom: 4px;
+    }
+    .phase-pip {
+      flex: 1;
+      height: 3px;
+      background: rgba(79,216,122,0.15);
+      border-radius: 2px;
+      transition: background 0.25s;
+      cursor: pointer;
+    }
+    .phase-pip.done   { background: rgba(79,216,122,0.45); }
+    .phase-pip.active { background: var(--accent); }
+
+    /* ── Phase controls bar (bottom of map) ─────────────────────── */
+    .phase-controls {
+      position: absolute;
+      bottom: 0;
+      left: 0; right: 0;
+      z-index: 12;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 7px 12px;
+      background: rgba(10,18,12,0.82);
+      border-top: 1px solid var(--border);
+      backdrop-filter: blur(4px);
+    }
+    .phase-btn {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.62rem;
+      padding: 5px 12px;
+      border: 1px solid var(--border);
+      background: rgba(79,216,122,0.08);
+      color: var(--accent);
+      border-radius: 3px;
+      cursor: pointer;
+      letter-spacing: 0.06em;
+      transition: background 0.15s;
+      min-width: 64px;
+      text-align: center;
+    }
+    .phase-btn:hover    { background: rgba(79,216,122,0.2); }
+    .phase-btn:disabled { opacity: 0.35; cursor: default; }
+    .phase-btn.auto-active { background: rgba(79,216,122,0.3); border-color: var(--accent); }
+    .phase-info {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      min-width: 200px;
+      text-align: center;
+      letter-spacing: 0.06em;
+    }
+
+    /* ── Sigma sliders (Session 8) ──────────────────────────────── */
+    .sigma-section {
+      margin-bottom: 10px;
+    }
+    .sigma-row {
+      margin-bottom: 10px;
+    }
+    .sigma-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+    .sigma-label {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+    }
+    .sigma-value {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.62rem;
+      color: var(--accent);
+      letter-spacing: 0.04em;
+    }
+    .sigma-slider {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      background: rgba(79,216,122,0.2);
+      border-radius: 2px;
+      outline: none;
+      margin: 0;
+      cursor: pointer;
+    }
+    .sigma-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      box-shadow: 0 0 6px rgba(79,216,122,0.6);
+    }
+    .sigma-slider.loading {
+      background: linear-gradient(90deg,
+        rgba(79,216,122,0.1) 0%,
+        rgba(79,216,122,0.4) 50%,
+        rgba(79,216,122,0.1) 100%);
+      background-size: 200% 100%;
+      animation: shimmer 0.8s linear infinite;
+    }
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    .sigma-markers {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 3px;
+    }
+    .sigma-marker {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.44rem;
+      color: rgba(106,154,120,0.55);
+      letter-spacing: 0em;
+      text-align: center;
+    }
+    .sigma-readout {
+      display: flex;
+      gap: 10px;
+      margin-top: 6px;
+      flex-wrap: wrap;
+    }
+    .sigma-stat {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.58rem;
+      color: var(--text-dim);
+    }
+    .sigma-stat span {
+      color: var(--accent);
+    }
+    .sigma-stat .chip-inline {
+      display: inline-block;
+      padding: 1px 5px;
+      border-radius: 2px;
+      font-size: 0.52rem;
+      font-weight: 600;
+    }
+    .sigma-stat .chip-inline.strike { background: rgba(232,92,74,0.2);  color: var(--hostile); border: 1px solid rgba(232,92,74,0.4); }
+    .sigma-stat .chip-inline.recon  { background: rgba(232,168,56,0.2); color: var(--warn);    border: 1px solid rgba(232,168,56,0.4); }
+    .sigma-stat .chip-inline.hold   { background: rgba(80,80,80,0.2);   color: var(--text-dim);border: 1px solid rgba(100,100,100,0.3); }
+    .sigma-stat .chip-inline.fa     { background: rgba(79,216,122,0.1); color: var(--accent);  border: 1px solid rgba(79,216,122,0.3); }
+    /* GDOP quality badge */
+    .gdop-badge { display: inline-flex; align-items: center; gap: 4px; cursor: help; }
+    .gdop-dot   { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .gdop-dot.good    { background: var(--accent);  box-shadow: 0 0 4px rgba(79,216,122,0.7); }
+    .gdop-dot.ok      { background: var(--warn);    box-shadow: 0 0 4px rgba(232,168,56,0.7); }
+    .gdop-dot.poor    { background: var(--hostile); box-shadow: 0 0 4px rgba(232,92,74,0.7); }
+    .gdop-dot.unknown { background: var(--text-dim); }
+
+    /* ── Money-curve mini-chart ──────────────────────────────────── */
+    .money-chart-wrap {
+      margin-top: 6px;
+      position: relative;
+    }
+    .money-chart-wrap svg {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+    .money-chart-label {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.44rem;
+      color: rgba(106,154,120,0.5);
+      margin-top: 2px;
+      text-align: center;
+    }
+
+    /* ── Session 14 — Source icon + acoustic emission ───────────── */
+    @keyframes blink-source {
+      0%, 100% { opacity: 1.0; transform: translate(-50%,-50%) scale(1.0); }
+      50%       { opacity: 0.60; transform: translate(-50%,-50%) scale(1.12); }
+    }
+    .entity.source {
+      z-index: 2;   /* above drones inside entity-layer stacking context */
+    }
+    .entity.source.blink {
+      animation: blink-source 0.5s ease-in-out infinite;
+    }
+    .entity.source svg {
+      filter: drop-shadow(0 0 10px var(--src-glow, #e85c4a))
+              drop-shadow(0 0 3px rgba(0,0,0,1))
+              drop-shadow(0 2px 8px rgba(0,0,0,0.95));
+    }
+    /* STRIKE outcome: dim + red × overlay */
+    .entity.source.neutralized-src { opacity: 0.42; }
+    .entity.source.neutralized-src::after {
+      content: '×';
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 1.8rem;
+      font-weight: 900;
+      color: #e85c4a;
+      text-shadow: 0 0 10px rgba(232,92,74,0.9), 0 0 4px rgba(0,0,0,1);
+      pointer-events: none;
+      line-height: 1;
+    }
+    /* RECON outcome: small camera badge */
+    .entity.source.recon-badge::before {
+      content: '📷';
+      position: absolute;
+      top: -4px; right: -4px;
+      font-size: 0.7rem;
+      pointer-events: none;
+    }
+
+    /* ── Phase subtitle bar ──────────────────────────────────────── */
+    .phase-subtitle {
+      position: absolute;
+      bottom: 40px;   /* just above .phase-controls */
+      left: 0;
+      right: 0;
+      z-index: 11;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.63rem;
+      color: rgba(184, 230, 200, 0.82);
+      text-align: center;
+      letter-spacing: 0.06em;
+      pointer-events: none;
+      padding: 5px 16px;
+      background: rgba(10, 18, 12, 0.72);
+      border-top: 1px solid rgba(79, 216, 122, 0.16);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: color 0.4s ease;
+    }
+
+    /* ── Session 10 — Sandbox mode ───────────────────────────────── */
+    .sb-toggle-card {
+      margin-top: 10px;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      background: rgba(0,0,0,0.2);
+    }
+    .sb-toggle-card h3 {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .sb-btn {
+      display: block;
+      width: 100%;
+      padding: 5px 8px;
+      font-family: "Rajdhani", sans-serif;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: rgba(79,216,122,0.08);
+      border: 1px solid rgba(79,216,122,0.3);
+      border-radius: 3px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .sb-btn:hover { background: rgba(79,216,122,0.18); border-color: var(--accent); }
+    .sb-btn.danger {
+      color: #e85c4a;
+      background: rgba(232,92,74,0.08);
+      border-color: rgba(232,92,74,0.3);
+    }
+    .sb-btn.danger:hover { background: rgba(232,92,74,0.18); border-color: #e85c4a; }
+    .sb-stat {
+      margin-top: 6px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.56rem;
+      color: var(--text-dim);
+      min-height: 14px;
+    }
+
+    /* Sandbox mode on the scenario cards — tiny ⊞ button */
+    .sc-sandbox-btn {
+      margin-left: 4px;
+      flex-shrink: 0;
+      font-size: 0.62rem;
+      line-height: 1;
+      padding: 1px 5px;
+      background: rgba(79,216,122,0.08);
+      border: 1px solid rgba(79,216,122,0.25);
+      border-radius: 2px;
+      color: var(--accent);
+      cursor: pointer;
+      transition: background 0.12s;
+      display: none;        /* hidden until localize data is loaded */
+    }
+    .sc-sandbox-btn:hover { background: rgba(79,216,122,0.22); }
+    .scenario-cards.ready .sc-sandbox-btn { display: inline-block; }
+
+    /* entity-layer cursor override in sandbox mode */
+    .entity-layer.sandbox-mode { cursor: crosshair; }
+    .entity-layer.sandbox-mode .entity { cursor: grab; }
+    .entity-layer.sandbox-mode .entity:active { cursor: grabbing; }
+
+    /* error line drawn via canvas in sandbox — no extra CSS needed */
+    /* sandbox source entity gets a special distinct style */
+    .entity.sb-source { z-index: 3; }
+    .entity.sb-source svg {
+      filter: drop-shadow(0 0 12px rgba(232,168,56,0.9))
+              drop-shadow(0 0 4px rgba(0,0,0,1));
+    }
+    .entity.sb-drone { cursor: grab !important; }
+    .entity.sb-drone:active { cursor: grabbing !important; }
+
+    /* sandbox overlay banner */
+    #sbBanner {
+      position: absolute;
+      top: 6px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 14;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.58rem;
+      letter-spacing: 0.1em;
+      color: var(--warn);
+      background: rgba(10,18,12,0.82);
+      border: 1px solid rgba(232,168,56,0.4);
+      border-radius: 3px;
+      padding: 3px 10px;
+      pointer-events: none;
+      display: none;
+    }
+    #sbBanner.visible { display: block; }
   </style>
 </head>
 <body>
@@ -718,20 +1102,25 @@
       </div>
     </header>
 
-    <aside class="panel" style="grid-row: 2">
-      <h2>Legend</h2>
-      <div class="legend" id="legend"></div>
-      <h2 style="margin-top: 14px">Mission timeline</h2>
-      <div class="timeline-readout" id="timelineReadout">
-        <div class="phase" id="timelinePhase">—</div>
-        <div class="event-name" id="timelineEvent">Loading…</div>
-        <div class="timeline-bar"><div class="timeline-bar-fill" id="timelineBar"></div></div>
+    <aside class="panel" style="grid-row: 2; overflow-y: auto;">
+      <h2>Scenarios</h2>
+      <div class="scenario-cards" id="scenarioCards"></div>
+      <div id="phaseLabelTxt" class="phase-label-txt">PATROL · standby</div>
+      <div class="phase-stepper" id="phaseStepper">
+        <div class="phase-pip" data-step="0" title="PATROL"></div>
+        <div class="phase-pip" data-step="1" title="DETECT"></div>
+        <div class="phase-pip" data-step="2" title="LOCALIZE"></div>
+        <div class="phase-pip" data-step="3" title="DECIDE"></div>
+        <div class="phase-pip" data-step="4" title="RESPOND"></div>
+        <div class="phase-pip" data-step="5" title="COMPLETE"></div>
       </div>
-      <div class="btn-row" style="margin-top: 8px">
-        <button type="button" id="btnPause">PAUSE</button>
-        <button type="button" id="btnRetry">RETRY</button>
-        <button type="button" id="btnNext">NEXT →</button>
+      <!-- Session 10 — Sandbox card -->
+      <div class="sb-toggle-card" id="sbCard">
+        <h3>⊞ Sandbox</h3>
+        <button class="sb-btn" id="btnSandbox">ENTER SANDBOX</button>
+        <div class="sb-stat" id="sbStat">Drag drones &amp; source to compute live fix</div>
       </div>
+
       <h2 style="margin-top: 14px">WebSocket</h2>
       <input type="text" id="wsUrl" value="ws://localhost:8765" placeholder="ws://host:port" />
       <div class="btn-row">
@@ -742,6 +1131,8 @@
     </aside>
 
     <div class="map-wrap">
+      <!-- Sandbox mode banner -->
+      <div id="sbBanner">⊞ SANDBOX — drag drones &amp; source · ESC to exit</div>
       <!-- Real topographic base map — MML Maastokartta + Rinnevarjostus hillshade -->
       <div id="leafletMap"></div>
       <!-- Dark veil — flattens map detail so coloured icons pop -->
@@ -774,12 +1165,68 @@
         <div class="feed-corner bl"></div>
         <div class="feed-corner br"></div>
       </div>
+      <!-- Phase subtitle bar (Session 14) -->
+      <div class="phase-subtitle" id="phaseSubtitle">Drones holding formation · acoustic monitoring active</div>
+      <!-- Phase controls bar -->
+      <div class="phase-controls" id="phaseControls">
+        <button class="phase-btn" id="btnPrev"      title="Previous phase [←]">⏪ PREV</button>
+        <button class="phase-btn" id="btnNextPhase" title="Next phase [→]">▶ NEXT</button>
+        <button class="phase-btn" id="btnAuto"      title="Toggle auto-advance [Space]">⏵ AUTO</button>
+        <button class="phase-btn" id="btnReset"     title="Reset scenario [R]">⟲ RESET</button>
+        <div class="phase-info" id="phaseInfo">PATROL · standby · 1/5</div>
+      </div>
     </div>
 
-    <aside class="panel" style="grid-row: 2">
-      <h2>Target stack</h2>
-      <div class="target-stack" id="targetStack"></div>
-      <h2 style="margin-top: 10px">Event log</h2>
+    <aside class="panel" style="grid-row: 2; overflow-y: auto;">
+      <h2>Error parameters</h2>
+      <div class="sigma-section">
+        <!-- σ_t slider -->
+        <div class="sigma-row">
+          <div class="sigma-header">
+            <span class="sigma-label">σ_t — timing error</span>
+            <span class="sigma-value" id="sigTVal">6.6 ms</span>
+          </div>
+          <input type="range" class="sigma-slider" id="sigTSlider"
+                 min="0" max="100" value="65" />
+          <div class="sigma-markers">
+            <span class="sigma-marker">GPS<br>1 µs</span>
+            <span class="sigma-marker">NTP<br>500 µs</span>
+            <span class="sigma-marker">cheap<br>3 ms</span>
+            <span class="sigma-marker">unsynced<br>20 ms</span>
+          </div>
+        </div>
+        <!-- σ_pos slider -->
+        <div class="sigma-row">
+          <div class="sigma-header">
+            <span class="sigma-label">σ_pos — position error</span>
+            <span class="sigma-value" id="sigPVal">11.8 m</span>
+          </div>
+          <input type="range" class="sigma-slider" id="sigPSlider"
+                 min="0" max="100" value="24" />
+          <div class="sigma-markers">
+            <span class="sigma-marker">GPS<br>1 m</span>
+            <span class="sigma-marker">RTK<br>0.1 m</span>
+            <span class="sigma-marker">IMU<br>5 m</span>
+            <span class="sigma-marker">IMU<br>15 m</span>
+            <span class="sigma-marker">denial<br>50 m</span>
+          </div>
+        </div>
+        <!-- Live readout -->
+        <div class="sigma-readout" id="sigReadout">
+          <div class="sigma-stat">CEP50 <span id="liveCep">—</span></div>
+          <div class="sigma-stat">Zone <span id="liveZone">—</span></div>
+          <div class="sigma-stat">GDOP <span id="liveGdop"><span class="gdop-badge"><span class="gdop-dot unknown"></span>—</span></span></div>
+          <div class="sigma-stat">Action <span id="liveAction">—</span></div>
+        </div>
+        <!-- Money-curve mini-chart -->
+        <div class="money-chart-wrap">
+          <svg id="moneyCurve" viewBox="0 0 220 90" xmlns="http://www.w3.org/2000/svg">
+            <!-- built by JS -->
+          </svg>
+          <div class="money-chart-label">σ_t (ms) vs CEP50 (m) — current operating point ●</div>
+        </div>
+      </div>
+      <h2 style="margin-top: 6px">Event log</h2>
       <div class="log" id="eventLog"></div>
     </aside>
 
@@ -875,14 +1322,60 @@
         <line x1="16" y1="12" x2="16" y2="20" stroke="#e8a838" stroke-width="2" stroke-linecap="round"/>
         <circle cx="16" cy="24" r="1.4" fill="#e8a838"/>
         <line x1="7" y1="3" x2="25" y2="27" stroke="rgba(79,216,122,0.5)" stroke-width="1" stroke-linecap="round"/>
+      </svg>`,
+      // ── Session 14/15 ambient wildlife icons ────────────────────────
+      bird: `<svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <path d="M3 17 Q7 11 14 13 Q21 11 25 15 L14 21 Z" fill="#4fd87a" opacity="0.85"/>
+        <circle cx="23" cy="11" r="3" fill="#4fd87a"/>
+        <path d="M23 8 Q27 5 29 9" stroke="#4fd87a" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      </svg>`,
+      dog: `<svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <ellipse cx="14" cy="18" rx="7" ry="5" fill="#4fd87a" opacity="0.85"/>
+        <circle cx="14" cy="10" r="5" fill="#4fd87a"/>
+        <path d="M10 7 L8 3 M18 7 L20 3" stroke="#4fd87a" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M8 22 L6 26 M20 22 L22 26" stroke="#4fd87a" stroke-width="1.2" stroke-linecap="round"/>
+      </svg>`,
+      crickets: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <ellipse cx="12" cy="14" rx="5" ry="3.5" fill="#4fd87a" opacity="0.8"/>
+        <circle cx="12" cy="9" r="2.5" fill="#4fd87a"/>
+        <line x1="7" y1="11" x2="3" y2="8"  stroke="#4fd87a" stroke-width="1.2" stroke-linecap="round"/>
+        <line x1="17" y1="11" x2="21" y2="8" stroke="#4fd87a" stroke-width="1.2" stroke-linecap="round"/>
+        <line x1="8" y1="16" x2="5" y2="20"  stroke="#4fd87a" stroke-width="1.2" stroke-linecap="round"/>
+        <line x1="16" y1="16" x2="19" y2="20" stroke="#4fd87a" stroke-width="1.2" stroke-linecap="round"/>
+      </svg>`,
+      deer: `<svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+        <ellipse cx="15" cy="20" rx="6" ry="5" fill="#4fd87a" opacity="0.85"/>
+        <circle cx="15" cy="12" r="4" fill="#4fd87a"/>
+        <path d="M12 9 L9 5 M9 5 L7 7" stroke="#4fd87a" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+        <path d="M18 9 L21 5 M21 5 L23 7" stroke="#4fd87a" stroke-width="1.5" stroke-linecap="round" fill="none"/>
       </svg>`
     };
 
     const LABEL_TO_ICON = {
-      gunshot:       "gunshot",
-      missile_launch:"missile_launch",
-      tank:          "tank",
-      drone:         "drone_hostile"
+      gunshot:        "gunshot",
+      missile_launch: "missile_launch",
+      tank:           "tank",
+      drone:          "drone_hostile",
+      // ambient (Session 15)
+      bird:           "bird",
+      dog:            "dog",
+      crickets:       "crickets",
+      deer:           "deer",
+    };
+
+    // ─── Classification colour map (Session 14) ───────────────────────────
+    const CLASS_COLOR = {
+      // threats
+      gunshot:        '#e85c4a',
+      tank:           '#e85c4a',
+      missile_launch: '#e85c4a',
+      drone:          '#e8a838',
+      drone_hostile:  '#e8a838',
+      // ambient (Session 15)
+      bird:           '#4fd87a',
+      dog:            '#4fd87a',
+      crickets:       '#4fd87a',
+      deer:           '#4fd87a',
     };
 
     function localizationUrls() {
@@ -965,6 +1458,11 @@
         { at: 0.68, msg: "POSITIVE ID · HOSTILE CONFIRMED",       lvl: "hostile" },
         { at: 0.90, msg: "REPORT SENT · AWAITING AUTHORITY",      lvl: "ok"      }
       ],
+      SEARCH: [
+        { at: 0.05, msg: "SEARCH PATTERN DEPLOYED · SWEEPING SECTOR",  lvl: "warn"    },
+        { at: 0.38, msg: "DRONES ON SWEEP POINTS · SCANNING",           lvl: "warn"    },
+        { at: 0.72, msg: "SECTOR COVERAGE COMPLETE · AWAITING EVENT",   lvl: "ok"      }
+      ],
       HOLD: [
         { at: 0.12, msg: "STANDBY · INSUFFICIENT CONFIDENCE",     lvl: "warn"    },
         { at: 0.55, msg: "REPOSITIONING SWARM FOR NEXT FIX",      lvl: "ok"      }
@@ -975,21 +1473,15 @@
       ]
     };
 
-    const PHASE_MS = {
-      transit:  7000,
-      listen:   4500,
-      localize: 5500,
-      hold:     99999   // waits for manual NEXT
-    };
-
-    const PHASE_LABEL = {
-      transit:  "UAV REPOSITIONING",
-      listen:   "ACOUSTIC DETECTION",
-      localize: "TDOA TRIANGULATION",
-      hold:     "CONTACT CONFIRMED — AWAITING ORDER"
-    };
-
-    const PHASE_ORDER = ["transit", "listen", "localize", "hold"];
+    // ─── Phase definitions (Session 7) ───────────────────────────────────
+    const PHASES = [
+      { id: "patrol",   label: "PATROL · standby",        dur: 0    },
+      { id: "detect",   label: "DETECT · audio event",    dur: 1500 },
+      { id: "localize", label: "LOCALIZE · TDOA cloud",   dur: 2200 },
+      { id: "decide",   label: "DECIDE · ROE evaluation", dur: 1000 },
+      { id: "respond",  label: "RESPOND · action exec",   dur: 4500 },
+      { id: "complete", label: "COMPLETE · contact held", dur: 0    },
+    ];
 
     // ─── State ────────────────────────────────────────────────────────────
     const state = {
@@ -1003,25 +1495,29 @@
       frames: [],
       geoBounds: null,   // bounds used for normToPixel coordinate conversion
       viewBounds: null,  // bounds currently committed to the Leaflet view
-      playback: {
-        index: 0,
-        prevIndex: 0,
-        phase: "transit",
-        phaseT: 0,
-        paused: false,
-        missionMs: 0,
-        localizeLogged: false,
-        holdLogged: false,
-        introShown: false,
-        reconDrone: null,
-        telemetryFired: new Set(),
-        feedShown: false,
-        holdProgressMs: 0
-      },
+      // Session 7 — operator step engine
+      scenarioIndex: 0,
+      step: 0,            // 0 = PATROL … 5 = COMPLETE
+      stepT: 0,           // ms elapsed in current step animation
+      stepProgress: 0,    // 0..1 within current step
+      autoplay: false,
+      paused: false,
+      completed: false,   // true once "complete" phase fires — freezes tickStep
+      missionMs: 0,
+      stepState: {},      // transient per-step data (reconDrone, telemetryFired, …)
       ws: null,
       pingCount: 0,
       lastFrame: performance.now(),
-      fps: 0
+      fps: 0,
+      // Session 10 — Sandbox
+      sandboxMode: false,
+      sandboxDrones: [],      // [{id, lat, lon, nx, ny}]
+      sandboxSource: null,    // {lat, lon, nx, ny}
+      sandboxEstimate: null,  // {lat, lon, nx, ny}  ← returned by API
+      sandboxError_m: null,   // distance truth→estimate in metres
+      sandboxFetching: false,
+      sandboxFetchTimer: 0,   // debounce countdown (ms)
+      sandboxLabel: "gunshot"
     };
 
     // ─── Canvas ───────────────────────────────────────────────────────────
@@ -1102,6 +1598,111 @@
       state.pingCount++;
     }
 
+    // ─── Session 14 — colour utilities ───────────────────────────────────
+
+    function hexToRgba(hex, alpha) {
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      return `rgba(${r},${g},${b},${alpha})`;
+    }
+
+    function labelColor(label) {
+      return CLASS_COLOR[label] || '#e8a838';
+    }
+
+    // ─── Session 14 — source entity helpers ──────────────────────────────
+
+    // Spawn (or update) the persistent source icon at the true/estimated source position.
+    // The icon appears at DETECT start and persists until reset/scenario change.
+    function spawnSourceEntity(cur) {
+      const tgt   = projectTarget(cur.target, cur.bounds);
+      const id    = `source-${cur.target.id}`;
+      const type  = cur.target.type; // already accounts for false_alarm
+      const label = cur.entry?.label || cur.target.label || 'unknown';
+      const color = labelColor(label);
+
+      let el = entityEls.get(id);
+      if (!el) {
+        // Colorize the SVG by substituting the default hostile-red tones
+        const rawSvg  = ICONS[type] || ICONS.unknown;
+        const colored = rawSvg
+          .replace(/#e85c4a/g, color)
+          .replace(/#c44a3a/g, color)
+          .replace(/#ff8a70/g, color);
+        el = document.createElement("div");
+        el.className  = "entity source blink";
+        el.dataset.id = id;
+        el.innerHTML  = `${colored}<span class="label"></span>`;
+        el.style.setProperty("--src-glow", color);
+        entityLayer.appendChild(el);
+        entityEls.set(id, el);
+      }
+      const pt = normToPixel(tgt.x, tgt.y);
+      el.style.left = `${pt.x}px`;
+      el.style.top  = `${pt.y}px`;
+      el.querySelector(".label").textContent = `[${label.toUpperCase()}]`;
+    }
+
+    function clearSourceEntity() {
+      if (!state.frames.length) return;
+      const cur = state.frames[state.scenarioIndex];
+      if (!cur) return;
+      const srcId = `source-${cur.target.id}`;
+      const srcEl = entityEls.get(srcId);
+      if (srcEl) { srcEl.remove(); entityEls.delete(srcId); }
+    }
+
+    // ─── Session 14 — phase subtitle ─────────────────────────────────────
+
+    function updatePhaseSubtitle() {
+      const el = document.getElementById("phaseSubtitle");
+      if (!el) return;
+      const phaseId = PHASES[state.step].id;
+      const cur     = state.frames[state.scenarioIndex];
+      const e       = cur?.entry;
+      const n       = cur?.drones?.length || 0;
+      const fa      = cur?.meta?.falseAlarm;
+      const act     = e?.recommended_action || "HOLD";
+      const label   = (e?.label_human || e?.label || "").toUpperCase();
+      const cep     = e?.cep50_m ?? "?";
+
+      const subtitles = {
+        patrol:   "Drones holding formation · acoustic monitoring active",
+        detect:   `Acoustic signature detected · ${n} sensor${n !== 1 ? "s" : ""} registering${label ? " · " + label : ""}`,
+        localize: `Triangulating source position — CEP50 ${cep} m`,
+        decide:   fa
+                    ? "⚠ FALSE ALARM · no threat · system continuing patrol"
+                    : `ROE evaluated · ${act}${label ? " · " + label : ""}`,
+        respond:  fa                     ? "False alarm logged · no responder dispatched"
+                : act === "STRIKE"  ? "Responder dispatched · weapons authorized · approach inbound"
+                : act === "RECON"   ? "Recon drone inbound · imaging target"
+                : act === "SEARCH"  ? "Search pattern active · 3 drones sweeping sector"
+                :                     "HOLD FIRE · no responder dispatched",
+        complete: fa
+                    ? "False alarm cleared · sector clean"
+                : act === "STRIKE"  ? "Target neutralized · sector clear"
+                : act === "RECON"   ? "Recon complete · report transmitted"
+                : act === "SEARCH"  ? "Search pattern complete · awaiting next event"
+                :                     "Contact logged · HOLD · awaiting further data",
+      };
+
+      el.textContent = subtitles[phaseId] || phaseId.toUpperCase();
+
+      // Colour the subtitle to match the phase's urgency
+      if (phaseId === "decide" || phaseId === "respond") {
+        if (fa)                    el.style.color = "rgba(79,216,122,0.85)";
+        else if (act === "STRIKE") el.style.color = "rgba(232,92,74,0.9)";
+        else if (act === "RECON")  el.style.color = "rgba(232,168,56,0.85)";
+        else if (act === "SEARCH") el.style.color = "rgba(30,154,240,0.9)";
+        else                       el.style.color = "rgba(184,230,200,0.55)";
+      } else if (phaseId === "complete") {
+        el.style.color = "rgba(79,216,122,0.88)";
+      } else {
+        el.style.color = "rgba(184,230,200,0.82)";
+      }
+    }
+
     // ─── Geo helpers ──────────────────────────────────────────────────────
     function computeGeoBounds(entry) {
       const lats = [], lons = [];
@@ -1122,15 +1723,6 @@
     }
 
     function lerp(a, b, t) { return a + (b - a) * t; }
-
-    function blendBounds(b1, b2, t) {
-      return {
-        minLat: lerp(b1.minLat, b2.minLat, t),
-        maxLat: lerp(b1.maxLat, b2.maxLat, t),
-        minLon: lerp(b1.minLon, b2.minLon, t),
-        maxLon: lerp(b1.maxLon, b2.maxLon, t)
-      };
-    }
 
     function shortScenarioName(scenario) {
       return scenario.replace(/^scenario_/, "").replace(/\.wav$/, "");
@@ -1219,6 +1811,69 @@
       ctx.stroke();
     }
 
+    function drawCepCircle() {
+      if (state.cloudAlpha <= 0) return;
+      const cur = state.frames[state.scenarioIndex];
+      if (!cur) return;
+      const e = cur.entry;
+      if (!e.cep50_m) return;
+
+      const a = state.cloudAlpha;
+
+      // Source position in canvas pixels
+      const srcN  = latLonToNorm(e.source.lat, e.source.lon, cur.bounds);
+      const srcPx = normToPixel(srcN.x, srcN.y);
+
+      // Convert CEP50 metres → pixels via lat offset (1° lat ≈ 111,000 m)
+      const latPerM  = 1 / 111000;
+      const offN     = latLonToNorm(e.source.lat + e.cep50_m * latPerM, e.source.lon, cur.bounds);
+      const offPx    = normToPixel(offN.x, offN.y);
+      const r50      = Math.abs(offPx.y - srcPx.y);
+
+      // CEP50 dashed circle
+      ctx.save();
+      ctx.setLineDash([5, 4]);
+      ctx.lineWidth   = 1.5;
+      ctx.strokeStyle = `rgba(232, 92, 74, ${0.80 * a})`;
+      ctx.beginPath();
+      ctx.arc(srcPx.x, srcPx.y, r50, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // CEP95 outer ring (faint), if available
+      if (e.cep95_m_approx) {
+        const offN95 = latLonToNorm(e.source.lat + e.cep95_m_approx * latPerM, e.source.lon, cur.bounds);
+        const offPx95 = normToPixel(offN95.x, offN95.y);
+        const r95 = Math.abs(offPx95.y - srcPx.y);
+        ctx.setLineDash([3, 6]);
+        ctx.lineWidth   = 1.0;
+        ctx.strokeStyle = `rgba(232, 92, 74, ${0.30 * a})`;
+        ctx.beginPath();
+        ctx.arc(srcPx.x, srcPx.y, r95, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+
+      // Crosshair at estimated center
+      const cs = 7;
+      ctx.lineWidth   = 1.5;
+      ctx.strokeStyle = `rgba(232, 92, 74, ${0.90 * a})`;
+      ctx.beginPath();
+      ctx.moveTo(srcPx.x - cs, srcPx.y); ctx.lineTo(srcPx.x + cs, srcPx.y);
+      ctx.moveTo(srcPx.x, srcPx.y - cs); ctx.lineTo(srcPx.x, srcPx.y + cs);
+      ctx.stroke();
+
+      // CEP50 label
+      ctx.font      = `bold 9px 'JetBrains Mono', monospace`;
+      ctx.textAlign = "left";
+      ctx.fillStyle = `rgba(232, 92, 74, ${0.90 * a})`;
+      ctx.fillText(`CEP50 ${e.cep50_m}m`, srcPx.x + r50 + 6, srcPx.y - 3);
+      if (e.cep95_m_approx) {
+        ctx.fillStyle = `rgba(232, 92, 74, ${0.45 * a})`;
+        ctx.fillText(`95%  ${e.cep95_m_approx}m`, srcPx.x + r50 + 6, srcPx.y + 9);
+      }
+      ctx.restore();
+    }
+
     function drawPulses() {
       const maxR = Math.min(canvasW, canvasH) * 0.32;
       for (let i = pulses.length - 1; i >= 0; i--) {
@@ -1269,6 +1924,25 @@
 
     function renderEntities() {
       const active = new Set();
+
+      // ── Preserve + reposition source entity (Session 14) ────────────────
+      // The source entity is spawned inside tickStep and must survive frame-to-frame;
+      // if we don't add its id to `active` here, removeStaleEntities would prune it.
+      if (state.frames.length) {
+        const cur   = state.frames[state.scenarioIndex];
+        const srcId = `source-${cur.target.id}`;
+        if (entityEls.has(srcId)) {
+          active.add(srcId);
+          // Re-project position each frame so it stays on the correct geo coordinate
+          // even after a map resize or fitBounds call.
+          const tgt = projectTarget(cur.target, cur.bounds);
+          const el  = entityEls.get(srcId);
+          const pt  = normToPixel(tgt.x, tgt.y);
+          el.style.left = `${pt.x}px`;
+          el.style.top  = `${pt.y}px`;
+        }
+      }
+
       for (const d of state.drones) {
         const id = `drone-${d.id}`;
         active.add(id);
@@ -1305,32 +1979,47 @@
       if (data.log) addLog(data.log.message, data.log.level || "ok");
     }
 
-    // ─── Timeline UI ──────────────────────────────────────────────────────
-    function updateTimelineUI() {
-      const pb    = state.playback;
-      const frame = state.frames[pb.index];
-      if (!frame) return;
-      const dur = pb.phase === "hold" ? 1 : PHASE_MS[pb.phase];
-      const pct = pb.phase === "hold" ? 100 : (dur > 0 ? Math.min(100, (pb.phaseT / dur) * 100) : 0);
-      document.getElementById("timelinePhase").textContent =
-        `${PHASE_LABEL[pb.phase]} · ${pb.index + 1}/${state.frames.length}`;
-      document.getElementById("timelineEvent").textContent =
-        frame.meta ? frame.meta.title : `${frame.shortName} → ${frame.target?.label || "unknown"}`;
-      document.getElementById("timelineBar").style.width = `${pct}%`;
-      const missionSec = Math.floor(pb.missionMs / 1000);
-      const mm = String(Math.floor(missionSec / 60)).padStart(2, "0");
-      const ss = String(missionSec % 60).padStart(2, "0");
-      const e  = frame.entry;
-      document.getElementById("coords").textContent =
-        `T+${mm}:${ss} · ${e.label_human || e.label} · CEP50 ${e.cep50_m}m`;
-    }
+    // ─── Phase UI update ──────────────────────────────────────────────────
+    function updatePhaseUI() {
+      const phase = PHASES[state.step];
+      const cur   = state.frames[state.scenarioIndex];
 
-    function logPlaybackEvent(frame, kind) {
-      const e = frame.entry;
-      if (kind === "listen")
-        addLog(`Acoustic signal · ${frame.shortName} · listening…`, "warn");
-      else if (kind === "localize")
-        addLog(`TDOA · ${e.label_human || e.label} · CEP50 ${e.cep50_m}m · ${frame.shortName}`, "hostile");
+      // Phase info bar
+      const infoEl = document.getElementById("phaseInfo");
+      if (infoEl) infoEl.textContent =
+        `${phase.label} · ${state.scenarioIndex + 1}/${state.frames.length}`;
+
+      // Pip bar
+      const lblEl = document.getElementById("phaseLabelTxt");
+      if (lblEl) lblEl.textContent = phase.label;
+      document.querySelectorAll(".phase-pip").forEach((pip, idx) => {
+        pip.classList.toggle("done",   idx < state.step);
+        pip.classList.toggle("active", idx === state.step);
+      });
+
+      // Button states
+      const btnPrev   = document.getElementById("btnPrev");
+      const btnNext   = document.getElementById("btnNextPhase");
+      const btnAuto   = document.getElementById("btnAuto");
+      if (btnPrev) btnPrev.disabled   = (state.step === 0);
+      if (btnNext) btnNext.disabled   = (state.step === PHASES.length - 1);
+      if (btnAuto) btnAuto.classList.toggle("auto-active", state.autoplay);
+
+      // Redraw money-curve operating-point dot on every tick
+      drawMoneyCurve();
+
+      // Session 14: phase subtitle bar
+      updatePhaseSubtitle();
+
+      // Coords line
+      if (cur) {
+        const e = cur.entry;
+        const missionSec = Math.floor(state.missionMs / 1000);
+        const mm = String(Math.floor(missionSec / 60)).padStart(2, "0");
+        const ss = String(missionSec % 60).padStart(2, "0");
+        document.getElementById("coords").textContent =
+          `T+${mm}:${ss} · ${e.label_human || e.label} · CEP50 ${e.cep50_m}m`;
+      }
     }
 
     // ─── Scenario intro helpers ───────────────────────────────────────────
@@ -1361,15 +2050,6 @@
       el.textContent = "";
     }
 
-    // ─── NEXT button helpers ──────────────────────────────────────────────
-    function showNextButton() {
-      document.getElementById("btnNext").classList.add("visible");
-    }
-
-    function hideNextButton() {
-      document.getElementById("btnNext").classList.remove("visible");
-    }
-
     // ─── Camera feed helpers ──────────────────────────────────────────────
     function showReconFeed(frame) {
       const el = document.getElementById("reconFeed");
@@ -1391,14 +2071,15 @@
     }
 
     // ─── Telemetry helper ─────────────────────────────────────────────────
-    function tickTelemetry(pb, cur, progress) {
+    function tickTelemetry(ss, cur, progress) {
       const fa  = cur.meta.falseAlarm;
       const act = cur.entry.recommended_action || "HOLD";
       const key = fa ? "FALSE_ALARM" : act;
       const schedule = TELEMETRY[key] || [];
+      if (!ss.telemetryFired) ss.telemetryFired = new Set();
       for (let i = 0; i < schedule.length; i++) {
-        if (!pb.telemetryFired.has(i) && progress >= schedule[i].at) {
-          pb.telemetryFired.add(i);
+        if (!ss.telemetryFired.has(i) && progress >= schedule[i].at) {
+          ss.telemetryFired.add(i);
           addLog(schedule[i].msg, schedule[i].lvl);
         }
       }
@@ -1414,225 +2095,410 @@
       }
     }
 
-    function advancePlaybackPhase() {
-      const pb = state.playback;
-      const i  = PHASE_ORDER.indexOf(pb.phase);
-      if (i < PHASE_ORDER.length - 1) {
-        pb.phase   = PHASE_ORDER[i + 1];
-        pb.phaseT  = 0;
-        pb.patrolT = 0;
-        pb.localizeLogged = false;
-        pb.holdLogged     = false;
-        const frame = state.frames[pb.index];
-        if (pb.phase === "listen")   { logPlaybackEvent(frame, "listen");   syncMapView(frame.bounds); }
-        if (pb.phase === "localize")   logPlaybackEvent(frame, "localize");
-        updateTargetStack();
-        return;
+    // ─── Step engine — Session 7 ──────────────────────────────────────────
+
+    function advanceStep() {
+      state.completed       = false;
+      state.cloudFromSlider = false;  // let the new phase own cloud state
+      if (state.step >= PHASES.length - 1) return;
+      const leaving = PHASES[state.step].id;
+      // Clean up leaving phase visuals where needed
+      if (leaving === "respond") { /* keep ROE banner in complete */ }
+      state.step++;
+      state.stepT        = 0;
+      state.stepProgress = 0;
+      // Don't wipe stepState; sub-phases check their own flags
+      const arriving = PHASES[state.step].id;
+      if (arriving === "detect") {
+        syncMapView(state.frames[state.scenarioIndex].bounds);
+        hideScenarioIntro();
       }
-      // Advance to next scenario — clean up styling first
-      clearTargetStyles();
-      hideRoeBanner();
-      hideNextButton();
-      hideScenarioIntro();
-      pb.prevIndex      = pb.index;
-      pb.index          = (pb.index + 1) % state.frames.length;
-      pb.phase          = "transit";
-      pb.phaseT         = 0;
-      pb.patrolT        = 0;
-      pb.localizeLogged  = false;
-      pb.holdLogged      = false;
-      pb.introShown      = false;
-      pb.reconDrone      = null;
-      pb.telemetryFired  = new Set();
-      pb.feedShown       = false;
-      pb.holdProgressMs  = 0;
-      state.targets      = [];
-      hideReconFeed();
-      state.cloud       = [];
-      state.cloudAlpha  = 0;
-      // Show intro card for incoming scenario, then sync map
-      const next = state.frames[pb.index];
-      showScenarioIntro(next, pb.index, state.frames.length);
-      updateTargetStack();
-      syncMapView(next.bounds);
+      updatePhaseUI();
+      updateScenarioCards();
     }
 
-    function tickPlayback(dt) {
-      if (state.mode !== "localize" || !state.frames.length || state.playback.paused) return;
+    // NEXT: snap phase to end if mid-animation; advance if already done
+    function nextPhase() {
+      const phase = PHASES[state.step];
+      if (phase.dur > 0 && state.stepProgress < 0.99) {
+        state.stepT        = phase.dur;
+        state.stepProgress = 1;
+      } else {
+        advanceStep();
+      }
+      updatePhaseUI();
+    }
+
+    // PREV: step back one phase, clearing transient visual state
+    function prevPhase() {
+      state.completed = false;
+      if (state.step === 0) return;
+      const leaving = PHASES[state.step].id;
+      const ss      = state.stepState;
+      const cur     = state.frames[state.scenarioIndex];
+
+      if (leaving === "decide" || leaving === "respond" || leaving === "complete") {
+        hideRoeBanner();
+        hideReconFeed();
+        clearTargetStyles();
+        // Reset respond-phase flags so it can re-init
+        delete ss.respondLogged;
+        delete ss.decideShown;
+        delete ss.reconDrone;
+        delete ss.searchDrones;     // Session 9
+        delete ss.telemetryFired;
+        delete ss.feedShown;
+        delete ss.respondProgressMs;
+        delete ss.completeLogged;
+        // Session 14: clear source outcome effects
+        delete ss.decidePulseSource;
+        delete ss.sourceNeutralized;
+        delete ss.sourceReconBadged;
+        if (cur) {
+          const srcEl = entityEls.get(`source-${cur.target.id}`);
+          if (srcEl) srcEl.classList.remove("neutralized-src", "recon-badge");
+        }
+      }
+      if (leaving === "localize") {
+        delete ss.localizeLogged;
+        delete ss.localizeStarted;
+        state.cloudAlpha = 0;
+        state.cloud      = [];
+        state.targets    = [];
+        // Session 14: re-add blink when reverting to DETECT
+        if (cur) {
+          const srcEl = entityEls.get(`source-${cur.target.id}`);
+          if (srcEl) srcEl.classList.add("blink");
+        }
+      }
+      if (leaving === "detect") {
+        // Session 14: remove source entity entirely (reverting to PATROL)
+        delete ss.sourceSpawned;
+        delete ss.lastRingEmitT;
+        delete ss.droneArrivalP;
+        delete ss.droneActivated;
+        clearSourceEntity();
+      }
+      state.step--;
+      state.stepT        = 0;
+      state.stepProgress = 0;
+      updatePhaseUI();
+      updateScenarioCards();
+    }
+
+    function setScenario(i) {
+      clearSourceEntity();   // Session 14: remove source icon before switching scenario
+      clearTargetStyles();
+      hideRoeBanner();
+      hideReconFeed();
+      hideScenarioIntro();
+      state.completed       = false;
+      state.cloudFromSlider = false;
+      state.scenarioIndex   = i;
+      state.step            = 0;
+      state.stepT           = 0;
+      state.stepProgress    = 0;
+      state.stepState       = {};
+      state.targets         = [];
+      state.cloud           = [];
+      state.cloudAlpha      = 0;
+      const cur = state.frames[i];
+      state.geoBounds = cur.bounds;
+      syncMapView(cur.bounds);
+      showScenarioIntro(cur, i, state.frames.length);
+      updateScenarioCards();
+      updatePhaseUI();
+      syncSlidersToScenario();
+      addLog(`Scenario ${i + 1}: ${cur.meta.title}`, "ok");
+      // Auto-start: enable autoplay and advance past the instant patrol phase
+      state.autoplay = true;
+      document.getElementById("btnAuto").classList.add("auto-active");
+      advanceStep();   // patrol (dur:0) → detect; also hides intro card
+    }
+
+    function resetScenario() {
+      clearSourceEntity();   // Session 14: remove source icon on reset
+      clearTargetStyles();
+      hideRoeBanner();
+      hideReconFeed();
+      state.completed       = false;
+      state.cloudFromSlider = false;
+      state.autoplay        = false;   // manual reset returns to manual mode
+      document.getElementById("btnAuto").classList.remove("auto-active");
+      state.step            = 0;
+      state.stepT           = 0;
+      state.stepProgress    = 0;
+      state.stepState       = {};
+      state.targets         = [];
+      state.cloud           = [];
+      state.cloudAlpha      = 0;
+      const cur = state.frames[state.scenarioIndex];
+      showScenarioIntro(cur, state.scenarioIndex, state.frames.length);
+      updatePhaseUI();
+      addLog("Reset to PATROL phase", "ok");
+    }
+
+    function tickStep(dt) {
+      if (state.mode !== "localize" || !state.frames.length || state.paused) return;
+      if (state.completed) return;  // frozen at end — wait for manual reset/replay
 
       entityLayer.classList.add("live-mission");
 
-      const pb  = state.playback;
-      pb.missionMs += dt;
-      pb.phaseT    += dt;
+      const phase = PHASES[state.step];
+      const cur   = state.frames[state.scenarioIndex];
+      const ss    = state.stepState;
 
-      const cur  = state.frames[pb.index];
-      const prev = state.frames[pb.prevIndex];
-      const dur  = PHASE_MS[pb.phase];
-      const t    = easeInOut(Math.min(1, pb.phaseT / dur));
+      // Advance time within phase (dur=0 phases are instant)
+      if (phase.dur > 0) {
+        state.stepT       += dt;
+        state.stepProgress = Math.min(1, state.stepT / phase.dur);
+      } else {
+        state.stepProgress = 1;
+      }
+      const p = state.stepProgress;
 
-      if (pb.phase === "transit") {
-        // Blend geoBounds for normToPixel; Leaflet view already set to cur.bounds
-        state.geoBounds  = blendBounds(prev.bounds, cur.bounds, t);
-        state.cloudAlpha = 0;
-        state.cloud      = [];
-        state.targets    = [];
-        state.drones     = cur.drones.map((d) => {
-          const from  = droneById(prev.drones, d.id) || d;
-          const lat   = lerp(from.lat, d.lat, t);
-          const lon   = lerp(from.lon, d.lon, t);
-          const p     = latLonToNorm(lat, lon, state.geoBounds);
-          const pFrom = latLonToNorm(from.lat, from.lon, state.geoBounds);
-          const pTo   = latLonToNorm(d.lat,   d.lon,   state.geoBounds);
-          return { id: d.id, x: p.x, y: p.y, heading: headingDeg(pFrom, pTo) };
-        });
-        if (Math.random() < 0.04)
-          for (const d of state.drones) emitPulse(d.x, d.y, "rgba(79, 216, 122, 0.32)");
-
-      } else if (pb.phase === "listen") {
+      if (phase.id === "patrol") {
         state.geoBounds  = cur.bounds;
-        pb.patrolT       = (pb.patrolT || 0) + dt * 0.002;
-        state.cloudAlpha = 0;
-        state.cloud      = [];
+        ss.patrolT       = (ss.patrolT || 0) + dt * 0.002;
+        if (!state.cloudFromSlider) { state.cloudAlpha = 0; state.cloud = []; }
         state.targets    = [];
-        const projected  = projectDrones(cur.drones, cur.bounds, pb.patrolT);
-        state.drones     = projected.map((d) => ({ id: d.id, x: d.x, y: d.y, heading: 0 }));
-        if (Math.random() < 0.07)
-          for (const d of state.drones) emitPulse(d.x, d.y, "rgba(79, 216, 122, 0.42)");
+        const proj = projectDrones(cur.drones, cur.bounds, ss.patrolT);
+        state.drones = proj.map(d => ({ id: d.id, x: d.x, y: d.y, heading: 0 }));
+        if (Math.random() < 0.05)
+          for (const d of state.drones) emitPulse(d.x, d.y, "rgba(79,216,122,0.28)");
 
-      } else if (pb.phase === "localize") {
+      } else if (phase.id === "detect") {
+        state.geoBounds  = cur.bounds;
+        ss.patrolT       = (ss.patrolT || 0) + dt * 0.001;
+        if (!state.cloudFromSlider) { state.cloudAlpha = 0; state.cloud = []; }
+        state.targets    = [];
+        const proj = projectDrones(cur.drones, cur.bounds, ss.patrolT);
+        state.drones = proj.map(d => ({ id: d.id, x: d.x, y: d.y, heading: 0 }));
+
+        // ── Session 14: spawn source icon at DETECT start ──────────────
+        if (!ss.sourceSpawned && p > 0.02) {
+          ss.sourceSpawned = true;
+          ss.lastRingEmitT = 200; // emit first ring immediately
+          spawnSourceEntity(cur);
+          addLog(`Acoustic signal · ${cur.shortName} · ${cur.entry.label || "unknown"} · listening…`, "warn");
+        }
+
+        // ── Session 14: emit concentric rings from source every 200 ms ──
+        if (ss.sourceSpawned) {
+          ss.lastRingEmitT = (ss.lastRingEmitT || 0) + dt;
+          if (ss.lastRingEmitT >= 200) {
+            ss.lastRingEmitT -= 200;
+            const srcProj = projectTarget(cur.target, cur.bounds);
+            const ringColor = hexToRgba(labelColor(cur.entry.label), 0.62);
+            emitPulse(srcProj.x, srcProj.y, ringColor);
+          }
+        }
+
+        // ── Session 14: drone light-up tied to ring-arrival distance ────
+        if (ss.sourceSpawned && !ss.droneArrivalP) {
+          const srcProj = projectTarget(cur.target, cur.bounds);
+          const srcPx   = normToPixel(srcProj.x, srcProj.y);
+          const dists   = state.drones.map(d => {
+            const dp = normToPixel(d.x, d.y);
+            return Math.hypot(dp.x - srcPx.x, dp.y - srcPx.y);
+          });
+          const maxD = Math.max(...dists, 1);
+          ss.droneArrivalP  = dists.map(dist => (dist / maxD) * 0.88);
+          ss.droneActivated = new Array(state.drones.length).fill(false);
+        }
+        if (ss.droneArrivalP) {
+          for (let i = 0; i < state.drones.length; i++) {
+            if (!ss.droneActivated[i] && p >= ss.droneArrivalP[i]) {
+              ss.droneActivated[i] = true;
+              const d = state.drones[i];
+              emitPulse(d.x, d.y, hexToRgba(labelColor(cur.entry.label), 0.78));
+            }
+          }
+        }
+
+      } else if (phase.id === "localize") {
         state.geoBounds = cur.bounds;
-        const projected = projectDrones(cur.drones, cur.bounds);
-        state.drones    = projected.map((d) => ({ id: d.id, x: d.x, y: d.y, heading: 0 }));
-        state.cloud     = projectCloud(cur.cloudLatLon, cur.bounds);
-        state.cloudAlpha = easeInOut(t);
-        if (t > 0.4) {
+        const proj = projectDrones(cur.drones, cur.bounds);
+        state.drones = proj.map(d => ({ id: d.id, x: d.x, y: d.y, heading: 0 }));
+        state.cloud      = projectCloud(cur.cloudLatLon, cur.bounds);
+        state.cloudAlpha = easeInOut(p);
+
+        // ── Session 14: stop blinking when localize starts ──────────────
+        if (!ss.localizeStarted) {
+          ss.localizeStarted = true;
+          const srcEl = entityEls.get(`source-${cur.target.id}`);
+          if (srcEl) srcEl.classList.remove("blink");
+        }
+
+        if (p > 0.4) {
           state.targets = [projectTarget(cur.target, cur.bounds)];
-          if (!pb.localizeLogged) {
-            pb.localizeLogged = true;
-            for (const d of state.drones) emitPulse(d.x, d.y, "rgba(79, 216, 122, 0.35)");
-            emitPulse(state.targets[0].x, state.targets[0].y, "rgba(232, 92, 74, 0.5)");
+          if (!ss.localizeLogged) {
+            ss.localizeLogged = true;
+            for (const d of state.drones) emitPulse(d.x, d.y, "rgba(79,216,122,0.35)");
+            const e = cur.entry;
+            addLog(`TDOA · ${e.label_human || e.label} · CEP50 ${e.cep50_m}m · ${cur.shortName}`, "hostile");
           }
         } else {
           state.targets = [];
         }
 
-      } else if (pb.phase === "hold") {
+      } else if (phase.id === "decide") {
         state.geoBounds  = cur.bounds;
-        const projected  = projectDrones(cur.drones, cur.bounds);
-        state.drones     = projected.map((d) => ({ id: d.id, x: d.x, y: d.y, heading: 0 }));
+        const proj = projectDrones(cur.drones, cur.bounds);
+        state.drones = proj.map(d => ({ id: d.id, x: d.x, y: d.y, heading: 0 }));
+        state.cloud      = projectCloud(cur.cloudLatLon, cur.bounds);
+        state.cloudAlpha = 1;
+        state.targets    = [projectTarget(cur.target, cur.bounds)];
+        if (!ss.decideShown && p > 0.15) {
+          ss.decideShown = true;
+          const e   = cur.entry;
+          const fa  = cur.meta.falseAlarm;
+          const act = e.recommended_action || "HOLD";
+          if (fa) {
+            showRoeBanner("⚠ FALSE ALARM — NO ACTION TAKEN", "roe-false");
+          } else if (act === "STRIKE") {
+            showRoeBanner(`⚔ STRIKE AUTHORIZED · ${e.label_human || e.label}`, "roe-hold");
+          } else if (act === "RECON") {
+            showRoeBanner(`▶ RECON ORDERED · ${e.label_human || e.label}`, "roe-recon");
+          } else if (act === "SEARCH") {
+            showRoeBanner(`⊹ SEARCH ORDERED · CEP50 ${e.cep50_m}m — SWEEPING SECTOR`, "roe-recon");
+          } else {
+            showRoeBanner(`✕ HOLD FIRE · CEP50 ${e.cep50_m}m — GEOMETRY INSUFFICIENT`, "roe-hold");
+          }
+        }
+        // ── Session 14: source icon flash in action colour ──────────────
+        if (!ss.decidePulseSource && p > 0.10) {
+          ss.decidePulseSource = true;
+          const act2  = cur.entry.recommended_action || "HOLD";
+          const glow  = act2 === "STRIKE" ? "#e85c4a" : act2 === "RECON" ? "#e8a838" : act2 === "SEARCH" ? "#1e9af0" : "#6a9a78";
+          const srcEl = entityEls.get(`source-${cur.target.id}`);
+          if (srcEl) {
+            srcEl.style.setProperty("--src-glow", glow);
+            srcEl.style.transition = "opacity 0.12s ease";
+            srcEl.style.opacity    = "0.35";
+            setTimeout(() => {
+              if (srcEl) { srcEl.style.opacity = ""; srcEl.style.transition = ""; }
+            }, 220);
+          }
+        }
+        if (state.targets.length && Math.random() < 0.015)
+          emitPulse(state.targets[0].x, state.targets[0].y, "rgba(232,92,74,0.22)");
+
+      } else if (phase.id === "respond") {
+        state.geoBounds  = cur.bounds;
+        const proj = projectDrones(cur.drones, cur.bounds);
+        state.drones     = proj.map(d => ({ id: d.id, x: d.x, y: d.y, heading: 0 }));
         state.cloud      = projectCloud(cur.cloudLatLon, cur.bounds);
         state.cloudAlpha = 1;
         state.targets    = [projectTarget(cur.target, cur.bounds)];
 
-        if (!pb.holdLogged) {
-          pb.holdLogged = true;
+        if (!ss.respondLogged) {
+          ss.respondLogged     = true;
+          ss.telemetryFired    = new Set();
+          ss.feedShown         = false;
+          ss.respondProgressMs = 0;
           const e   = cur.entry;
-          const act = e.recommended_action || "HOLD";
           const fa  = cur.meta.falseAlarm;
+          const act = e.recommended_action || "HOLD";
 
-          // Pick the nearest drone to the target as the responder
           if (!fa && (act === "RECON" || act === "STRIKE")) {
             const tgt = state.targets[0];
-            let closest = state.drones[0];
-            let bestDist = Infinity;
+            let closest = state.drones[0], bestDist = Infinity;
             for (const d of state.drones) {
               const dist = Math.hypot(d.x - tgt.x, d.y - tgt.y);
               if (dist < bestDist) { bestDist = dist; closest = d; }
             }
-            pb.reconDrone = {
+            ss.reconDrone = {
               id: closest.id,
               fromX: closest.x, fromY: closest.y,
               toX: tgt.x, toY: tgt.y,
-              t: 0,
-              strike: act === "STRIKE",
-              impacted: false
+              t: 0, strike: act === "STRIKE", impacted: false
             };
           }
 
-          // Apply visual styling to the target entity
+          // ── Session 9: SEARCH — fan all 3 drones to sweep points ────────
+          if (!fa && act === "SEARCH") {
+            const pts = cur.entry.search_pattern_latlon;
+            if (pts && pts.length >= 1) {
+              ss.searchDrones = state.drones.map((d, i) => {
+                const sweepIdx = i % pts.length;
+                const tgtPt    = pts[sweepIdx];
+                const b        = cur.bounds;
+                const tNorm    = latLonToNorm(tgtPt.lat, tgtPt.lon, b);
+                return {
+                  id: d.id, fromX: d.x, fromY: d.y,
+                  toX: tNorm.x, toY: tNorm.y, t: 0
+                };
+              });
+            }
+          }
+
           setTimeout(() => {
             const tId = `target-${cur.target.id}`;
             const tel = entityEls.get(tId);
             if (tel) {
-              if (fa) {
-                tel.classList.add("false-alarm-marker");
-              } else if (act === "RECON") {
-                tel.classList.add("recon-scanning");
-              }
-              // STRIKE: target styling applied on impact (see reconDrone animation)
+              if (fa) tel.classList.add("false-alarm-marker");
+              else if (act === "RECON") tel.classList.add("recon-scanning");
             }
           }, 200);
 
-          // ROE banner
           if (fa) {
-            showRoeBanner("⚠ FALSE ALARM — NO ACTION TAKEN", "roe-false");
             addLog(`FALSE ALARM · ${cur.shortName} · misclassification confirmed`, "warn");
           } else if (act === "STRIKE") {
-            showRoeBanner(`⚔ STRIKE AUTHORIZED · ${e.label_human || e.label}`, "roe-hold");
             addLog(`STRIKE · ${e.label_human || e.label} · CEP50 ${e.cep50_m}m · weapons released`, "hostile");
           } else if (act === "RECON") {
-            showRoeBanner(`▶ RECON ORDERED · ${e.label_human || e.label}`, "roe-recon");
             addLog(`RECON · ${e.label_human || e.label} · CEP50 ${e.cep50_m}m · ${cur.shortName}`, "warn");
+          } else if (act === "SEARCH") {
+            addLog(`SEARCH · ${e.label_human || e.label} · CEP50 ${e.cep50_m}m — sweeping sector`, "warn");
           } else {
-            showRoeBanner(`✕ HOLD FIRE · CEP50 ${e.cep50_m}m — GEOMETRY INSUFFICIENT`, "roe-hold");
             addLog(`HOLD · ${e.label_human || e.label} · CEP50 ${e.cep50_m}m · GDOP ${e.gdop} — fix too uncertain`, "hostile");
           }
-
-          // Show NEXT button
-          showNextButton();
         }
 
         if (state.targets.length && Math.random() < 0.015)
-          emitPulse(state.targets[0].x, state.targets[0].y, "rgba(232, 92, 74, 0.25)");
+          emitPulse(state.targets[0].x, state.targets[0].y, "rgba(232,92,74,0.25)");
 
-        // Telemetry — progress based on drone flight t, or elapsed time for HOLD
-        pb.holdProgressMs = (pb.holdProgressMs || 0) + dt;
-        const fa  = cur.meta.falseAlarm;
-        const act = cur.entry.recommended_action || "HOLD";
-        const telProgress = pb.reconDrone
-          ? pb.reconDrone.t
-          : Math.min(1, pb.holdProgressMs / 14000);
-        tickTelemetry(pb, cur, telProgress);
+        ss.respondProgressMs = (ss.respondProgressMs || 0) + dt;
+        const telProgress = ss.reconDrone
+          ? ss.reconDrone.t
+          : ss.searchDrones
+            ? ss.searchDrones.reduce((s, sd) => s + sd.t, 0) / ss.searchDrones.length
+            : Math.min(1, ss.respondProgressMs / 14000);
+        tickTelemetry(ss, cur, telProgress);
 
-        // Camera feed: show for RECON at t≥0.38, STRIKE at t≥0.65
-        if (pb.reconDrone && !pb.feedShown) {
-          const showAt = act === "STRIKE" ? 0.65 : 0.38;
-          if (pb.reconDrone.t >= showAt) {
-            pb.feedShown = true;
+        if (ss.reconDrone && !ss.feedShown) {
+          const act2  = cur.entry.recommended_action || "HOLD";
+          const showAt = act2 === "STRIKE" ? 0.65 : 0.38;
+          if (ss.reconDrone.t >= showAt) {
+            ss.feedShown = true;
             showReconFeed(cur);
           }
         }
         updateFeedTimestamp();
 
-        // Animate responder drone flying toward the target
-        if (pb.reconDrone) {
-          const rd = pb.reconDrone;
+        if (ss.reconDrone) {
+          const rd = ss.reconDrone;
           rd.t = Math.min(1, rd.t + dt / 5500);
-          const et = easeInOut(rd.t);
-          const rx = lerp(rd.fromX, rd.toX, et);
-          const ry = lerp(rd.fromY, rd.toY, et);
+          const et  = easeInOut(rd.t);
+          const rx  = lerp(rd.fromX, rd.toX, et);
+          const ry  = lerp(rd.fromY, rd.toY, et);
           const hdg = headingDeg({ x: rd.fromX, y: rd.fromY }, { x: rd.toX, y: rd.toY });
-          state.drones = state.drones.map((d) =>
+          state.drones = state.drones.map(d =>
             d.id === rd.id
-              ? { ...d, x: rx, y: ry, heading: hdg,
-                  recon: !rd.strike, strike: rd.strike }
+              ? { ...d, x: rx, y: ry, heading: hdg, recon: !rd.strike, strike: rd.strike }
               : d
           );
-          const trailColor = rd.strike
-            ? "rgba(232,92,74,0.45)"
-            : "rgba(232,168,56,0.4)";
-          if (rd.t < 1 && Math.random() < 0.04)
-            emitPulse(rx, ry, trailColor);
+          const trailColor = rd.strike ? "rgba(232,92,74,0.45)" : "rgba(232,168,56,0.4)";
+          if (rd.t < 1 && Math.random() < 0.04) emitPulse(rx, ry, trailColor);
 
-          // Impact: drone reaches target on a STRIKE run
           if (rd.strike && rd.t >= 1 && !rd.impacted) {
             rd.impacted = true;
-            // Neutralize the target entity
             const tId = `target-${cur.target.id}`;
             const tel = entityEls.get(tId);
             if (tel) tel.classList.add("neutralized");
-            // Explosion pulses
+            // ── Session 14: neutralized overlay on source icon ──────────
+            const srcEl = entityEls.get(`source-${cur.target.id}`);
+            if (srcEl) srcEl.classList.add("neutralized-src");
             for (let i = 0; i < 4; i++) {
               setTimeout(() => {
                 emitPulse(rd.toX, rd.toY, "rgba(232,92,74,0.7)");
@@ -1640,53 +2506,370 @@
               }, i * 180);
             }
             addLog(`IMPACT · target neutralized · ${cur.shortName}`, "hostile");
-            // Remove target from state after animation
             setTimeout(() => { state.targets = []; }, 1400);
           }
+          // ── Session 14: camera badge on source icon for RECON ─────────
+          if (!ss.sourceReconBadged && ss.feedShown &&
+              cur.entry.recommended_action === "RECON") {
+            ss.sourceReconBadged = true;
+            const srcEl2 = entityEls.get(`source-${cur.target.id}`);
+            if (srcEl2) srcEl2.classList.add("recon-badge");
+          }
         }
-        // hold never auto-advances — waits for btnNext click
+
+        // ── Session 9: tick SEARCH sweep drones ─────────────────────────
+        if (ss.searchDrones) {
+          ss.searchDrones.forEach(sd => {
+            sd.t = Math.min(1, sd.t + dt / 4800);
+          });
+          const et_arr = ss.searchDrones.map(sd => easeInOut(sd.t));
+          state.drones = state.drones.map((d, i) => {
+            const sd = ss.searchDrones.find(x => x.id === d.id);
+            if (!sd) return d;
+            const et = easeInOut(sd.t);
+            const rx = lerp(sd.fromX, sd.toX, et);
+            const ry = lerp(sd.fromY, sd.toY, et);
+            const hdg = headingDeg({ x: sd.fromX, y: sd.fromY }, { x: sd.toX, y: sd.toY });
+            if (sd.t < 1 && Math.random() < 0.03)
+              emitPulse(rx, ry, "rgba(30,154,240,0.38)");
+            return { ...d, x: rx, y: ry, heading: hdg };
+          });
+          // Sonar scan pulses from sweep points once drones arrive
+          ss.searchDrones.forEach(sd => {
+            if (sd.t >= 1 && Math.random() < 0.012)
+              emitPulse(sd.toX, sd.toY, "rgba(30,154,240,0.28)");
+          });
+        }
+
+        // Auto-advance to COMPLETE when respond animation finishes
+        if (state.autoplay && phase.dur > 0 && state.stepProgress >= 1) {
+          advanceStep();
+        }
+
+      } else if (phase.id === "complete") {
+        state.geoBounds  = cur.bounds;
+        const proj = projectDrones(cur.drones, cur.bounds);
+        state.drones     = proj.map(d => ({ id: d.id, x: d.x, y: d.y, heading: 0 }));
+        state.cloud      = projectCloud(cur.cloudLatLon, cur.bounds);
+        state.cloudAlpha = 1;
+        if (!ss.completeLogged) {
+          ss.completeLogged = true;
+          state.completed = true;   // freeze — tickStep will exit early from next frame
+          state.autoplay  = false;  // reset AUTO button so it reflects the stopped state
+          const btnAuto = document.getElementById("btnAuto");
+          if (btnAuto) btnAuto.classList.remove("auto-active");
+          const e = cur.entry;
+          addLog(`COMPLETE · ${cur.meta.title} · ${e.recommended_action || "HOLD"}`, "ok");
+          addLog("Scenario frozen — press RESET or R to replay", "ok");
+        }
+        // No random pings here — we're frozen, only the initial state is shown
       }
 
-      updateTimelineUI();
-      if (pb.phase !== "hold" && pb.phaseT >= dur) advancePlaybackPhase();
+      // Auto-advance non-zero-duration phases (except respond which has its own logic)
+      if (state.autoplay && phase.dur > 0 && state.stepProgress >= 1 && phase.id !== "respond") {
+        advanceStep();
+      }
+
+      updatePhaseUI();
+      state.missionMs += dt;
     }
 
-    function startPlayback() {
+    function startStepEngine() {
       const n = state.frames.length;
       if (!n) return;
       clearTargetStyles();
       hideRoeBanner();
-      hideNextButton();
       hideScenarioIntro();
       hideReconFeed();
-      state.playback = {
-        index: 0, prevIndex: n - 1,
-        phase: "transit", phaseT: 0,
-        paused: false, missionMs: 0,
-        localizeLogged: false, holdLogged: false, introShown: false,
-        reconDrone: null, telemetryFired: new Set(), feedShown: false,
-        holdProgressMs: 0
-      };
-      state.cloudAlpha = 0;
-      state.targets    = [];
-      state.cloud      = [];
-      state.geoBounds  = state.frames[0].bounds;
+      state.scenarioIndex = 0;
+      state.step          = 0;
+      state.stepT         = 0;
+      state.stepProgress  = 0;
+      state.autoplay      = false;
+      state.paused        = false;
+      state.missionMs     = 0;
+      state.stepState     = {};
+      state.cloudAlpha    = 0;
+      state.targets       = [];
+      state.cloud         = [];
+      state.geoBounds     = state.frames[0].bounds;
       syncMapView(state.frames[0].bounds);
-      // Show intro card for the first scenario
       showScenarioIntro(state.frames[0], 0, n);
-      buildTargetStack();
-      updateTimelineUI();
-      addLog(`Mission · ${n} curated scenarios — press NEXT to advance`, "ok");
+      buildScenarioCards();
+      updatePhaseUI();
+      syncSlidersToScenario();
+      addLog(`Mission ready · ${n} scenarios · click a card or press → to begin`, "ok");
+    }
+
+    // ─── Session 8 — σ sliders + live recompute ──────────────────────────
+
+    // Log-scale helpers for σ_t: slider 0-100 → 0.001 ms to 20 ms
+    const SIGT_MIN_MS = 0.001, SIGT_MAX_MS = 20.0;
+    function sliderToSigT(v) {
+      const t = v / 100;
+      return SIGT_MIN_MS * Math.pow(SIGT_MAX_MS / SIGT_MIN_MS, t);
+    }
+    function sigTToSlider(ms) {
+      return Math.round(Math.log(ms / SIGT_MIN_MS) / Math.log(SIGT_MAX_MS / SIGT_MIN_MS) * 100);
+    }
+
+    // Linear σ_pos: slider 0-100 → 0 to 50 m
+    const SIGP_MAX_M = 50.0;
+    function sliderToSigP(v) { return (v / 100) * SIGP_MAX_M; }
+    function sigPToSlider(m) { return Math.round((m / SIGP_MAX_M) * 100); }
+
+    function formatSigT(ms) {
+      if (ms < 0.01)  return (ms * 1000).toFixed(1) + " µs";
+      if (ms < 1)     return ms.toFixed(3) + " ms";
+      return ms.toFixed(2) + " ms";
+    }
+    function formatSigP(m) { return m.toFixed(1) + " m"; }
+
+    // Debounce timer
+    let _sigDebounce = null;
+
+    // ── Live frontend cloud scaling (no backend needed) ──────────────────
+    // Scales the pre-loaded cloud around the source position by the ratio
+    // of the new sigma_pos to the scenario's base sigma_pos.
+    function applySliderCloud(sigP_m) {
+      const cur = state.frames[state.scenarioIndex];
+      if (!cur || !cur.cloudLatLon || !cur.cloudLatLon.length) return;
+      const src      = cur.entry.source;
+      const baseSigP = cur.entry.input_errors?.position_m_max ?? 11.8;
+      const scale    = baseSigP > 0 ? sigP_m / baseSigP : 1;
+      const scaled   = cur.cloudLatLon.map(pt => ({
+        lat: src.lat + (pt.lat - src.lat) * scale,
+        lon: src.lon + (pt.lon - src.lon) * scale,
+      }));
+      state.cloud          = projectCloud(scaled, cur.bounds);
+      state.cloudAlpha     = Math.max(state.cloudAlpha, 0.75);
+      state.cloudFromSlider = true;  // prevent tickStep clearing it during patrol/detect
+    }
+
+    function onSliderInput() {
+      const st = sliderToSigT(+document.getElementById("sigTSlider").value);
+      const sp = sliderToSigP(+document.getElementById("sigPSlider").value);
+      document.getElementById("sigTVal").textContent = formatSigT(st);
+      document.getElementById("sigPVal").textContent = formatSigP(sp);
+      // Store numeric values for sandbox fetch
+      document.getElementById("sigTSlider").dataset.sigmaMs   = st;
+      document.getElementById("sigPSlider").dataset.sigmaPosM = sp;
+      // Immediate live update — no backend, no debounce
+      applySliderCloud(sp);
+      // Backend recompute for CEP / recommended-action numbers (localhost only)
+      setSliderLoading(true);
+      clearTimeout(_sigDebounce);
+      _sigDebounce = setTimeout(() => recomputeCurrentScenario(st, sp), 120);
+      // Re-run sandbox fetch if active
+      if (state.sandboxMode) scheduleSandboxFetch(200);
+    }
+
+    function setSliderLoading(on) {
+      document.getElementById("sigTSlider").classList.toggle("loading", on);
+      document.getElementById("sigPSlider").classList.toggle("loading", on);
+    }
+
+    async function recomputeCurrentScenario(sigT, sigP) {
+      if (!state.frames.length) return;
+      const cur = state.frames[state.scenarioIndex];
+      const scenarioId = cur.entry.scenario;
+      const base = (location.hostname === "127.0.0.1" || location.hostname === "localhost")
+        ? `${location.origin}`
+        : null;
+      if (!base) { setSliderLoading(false); return; }
+
+      try {
+        const url = `${base}/api/scenarios/${encodeURIComponent(scenarioId)}` +
+                    `?sigma_t_ms=${sigT.toFixed(5)}&sigma_pos_m=${sigP.toFixed(3)}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        // Patch the live frame's entry with recomputed values
+        cur.entry = { ...cur.entry,
+          cep50_m:            data.cep50_m,
+          cep95_m_approx:     data.cep95_m_approx,
+          zone_area_m2:       data.zone_area_m2,
+          gdop:               data.gdop,
+          cloud_latlon:       data.cloud_latlon,
+          cloud_xy_local:     data.cloud_xy_local,
+          recommended_action: data.recommended_action,
+          recommended_action_reason: data.recommended_action_reason,
+          localization_confidence: data.localization_confidence,
+        };
+        cur.cloudLatLon = data.cloud_latlon || [];
+        // If in localize/decide/respond/complete phase — re-project cloud
+        const pid = PHASES[state.step].id;
+        if (["localize","decide","respond","complete"].includes(pid)) {
+          state.cloud      = projectCloud(cur.cloudLatLon, cur.bounds);
+          state.cloudAlpha = state.cloudAlpha > 0 ? 1 : 0;
+        }
+        updateLiveReadout(data);
+        updateScenarioCards();
+      } catch (e) {
+        addLog(`Recompute failed: ${e.message}`, "warn");
+      } finally {
+        setSliderLoading(false);
+      }
+    }
+
+    function gdopQuality(gdop) {
+      if (gdop == null || isNaN(gdop)) return { cls: "unknown", label: "—",    tip: "No GDOP data" };
+      if (gdop <= 2)  return { cls: "good", label: "GOOD",     tip: `GDOP ${gdop} · Drones well-spread; tight fix` };
+      if (gdop <= 5)  return { cls: "ok",   label: "OK",       tip: `GDOP ${gdop} · Acceptable geometry` };
+      return               { cls: "poor",  label: "POOR",     tip: `GDOP ${gdop} · Near-collinear drones; smeared fix` };
+    }
+
+    function updateLiveReadout(entry) {
+      if (!entry) return;
+      const fa  = state.frames[state.scenarioIndex]?.meta?.falseAlarm;
+      const act = entry.recommended_action || "HOLD";
+      const chipClass = fa ? "fa" : (act === "STRIKE" ? "strike" : act === "RECON" ? "recon" : "hold");
+      const chipLabel = fa ? "F/A" : act;
+      const cepEl    = document.getElementById("liveCep");
+      const zoneEl   = document.getElementById("liveZone");
+      const gdopEl   = document.getElementById("liveGdop");
+      const actEl    = document.getElementById("liveAction");
+      if (cepEl)  cepEl.textContent  = entry.cep50_m + " m";
+      if (zoneEl) zoneEl.textContent = Math.round(entry.zone_area_m2) + " m²";
+      if (gdopEl) {
+        const q = gdopQuality(entry.gdop);
+        gdopEl.innerHTML =
+          `<span class="gdop-badge" title="${q.tip}">` +
+          `<span class="gdop-dot ${q.cls}"></span>${entry.gdop ?? "—"} ${q.label}</span>`;
+      }
+      if (actEl)  actEl.innerHTML    =
+        `<span class="chip-inline ${chipClass}">${chipLabel}</span>`;
+    }
+
+    // ── Money-curve chart ─────────────────────────────────────────────────────
+
+    let _sweepData  = [];   // [{sigma_t_ms, cep50_m, action}, ...]
+    let _sweepSigP  = null; // σ_pos value the sweep was built for
+
+    async function fetchSweep() {
+      if (!state.frames.length) return;
+      const cur = state.frames[state.scenarioIndex];
+      const scenarioId = cur.entry.scenario;
+      const base = (location.hostname === "127.0.0.1" || location.hostname === "localhost")
+        ? location.origin : null;
+      if (!base) return;
+      const sp = sliderToSigP(+document.getElementById("sigPSlider").value);
+      if (_sweepSigP !== null && Math.abs(_sweepSigP - sp) < 0.5 &&
+          _sweepData.length > 0) return; // reuse if σ_pos unchanged
+      try {
+        const url = `${base}/api/scenarios/${encodeURIComponent(scenarioId)}/sweep` +
+                    `?sigma_pos_m=${sp.toFixed(3)}`;
+        const res = await fetch(url);
+        if (!res.ok) return;
+        _sweepData = await res.json();
+        _sweepSigP = sp;
+        drawMoneyCurve();
+      } catch (_) {}
+    }
+
+    function drawMoneyCurve() {
+      const svg = document.getElementById("moneyCurve");
+      if (!svg) return;
+      const W = 220, H = 90;
+      const PL = 28, PR = 8, PT = 8, PB = 22;
+      const cw = W - PL - PR, ch = H - PT - PB;
+
+      // axis ranges (log for x, linear for y capped at 150 m)
+      const xMin = Math.log10(0.001), xMax = Math.log10(20);
+      const yMin = 0, yMax = 150;
+
+      function xPx(sigma_ms) {
+        return PL + (Math.log10(sigma_ms) - xMin) / (xMax - xMin) * cw;
+      }
+      function yPx(cep) {
+        return PT + ch - Math.min(1, (cep - yMin) / (yMax - yMin)) * ch;
+      }
+
+      // Colour bands: STRIKE zone (cep ≤ 10), RECON (10–50), HOLD/SEARCH (>50)
+      const bands = [
+        { y1: 0,   y2: 10,  color: "rgba(232,92,74,0.12)" },
+        { y1: 10,  y2: 50,  color: "rgba(232,168,56,0.10)" },
+        { y1: 50,  y2: 150, color: "rgba(80,80,80,0.12)" },
+      ];
+
+      let inner = "";
+
+      // Background bands
+      for (const b of bands) {
+        const by1 = yPx(b.y2), by2 = yPx(b.y1);
+        inner += `<rect x="${PL}" y="${by1}" width="${cw}" height="${by2 - by1}" fill="${b.color}"/>`;
+      }
+
+      // Axes
+      inner += `<line x1="${PL}" y1="${PT}" x2="${PL}" y2="${PT + ch}" stroke="rgba(79,216,122,0.3)" stroke-width="0.8"/>`;
+      inner += `<line x1="${PL}" y1="${PT + ch}" x2="${PL + cw}" y2="${PT + ch}" stroke="rgba(79,216,122,0.3)" stroke-width="0.8"/>`;
+
+      // X-axis tick labels (log scale: 0.001, 0.01, 0.1, 1, 10, 20)
+      const xTicks = [0.001, 0.01, 0.1, 1, 10, 20];
+      for (const t of xTicks) {
+        const tx = xPx(t);
+        const lbl = t < 1 ? t.toString() : t.toString();
+        inner += `<line x1="${tx}" y1="${PT + ch}" x2="${tx}" y2="${PT + ch + 3}" stroke="rgba(79,216,122,0.3)" stroke-width="0.6"/>`;
+        inner += `<text x="${tx}" y="${H - 4}" text-anchor="middle" fill="rgba(106,154,120,0.55)" font-size="5" font-family="monospace">${lbl}</text>`;
+      }
+
+      // Y-axis ticks (0, 50, 100)
+      for (const t of [0, 50, 100]) {
+        const ty = yPx(t);
+        inner += `<line x1="${PL - 3}" y1="${ty}" x2="${PL}" y2="${ty}" stroke="rgba(79,216,122,0.3)" stroke-width="0.6"/>`;
+        inner += `<text x="${PL - 5}" y="${ty + 1.5}" text-anchor="end" fill="rgba(106,154,120,0.55)" font-size="5" font-family="monospace">${t}</text>`;
+      }
+
+      // Sweep curve
+      if (_sweepData.length > 1) {
+        const pts = _sweepData.map(d => `${xPx(d.sigma_t_ms).toFixed(1)},${yPx(d.cep50_m).toFixed(1)}`).join(" ");
+        inner += `<polyline points="${pts}" fill="none" stroke="rgba(79,216,122,0.7)" stroke-width="1.2" stroke-linejoin="round"/>`;
+      }
+
+      // Current operating point
+      const sigT = sliderToSigT(+document.getElementById("sigTSlider").value);
+      const curEntry = state.frames[state.scenarioIndex]?.entry;
+      if (curEntry) {
+        const ox = xPx(sigT), oy = yPx(curEntry.cep50_m);
+        inner += `<circle cx="${ox}" cy="${oy}" r="3.5" fill="var(--hostile)" stroke="rgba(0,0,0,0.6)" stroke-width="0.8"/>`;
+        // Vertical guide line
+        inner += `<line x1="${ox}" y1="${PT}" x2="${ox}" y2="${PT + ch}" stroke="rgba(232,92,74,0.3)" stroke-width="0.6" stroke-dasharray="2,2"/>`;
+      }
+
+      // Axis labels
+      inner += `<text x="${PL + cw / 2}" y="${H}" text-anchor="middle" fill="rgba(106,154,120,0.45)" font-size="5" font-family="monospace">σ_t (ms)</text>`;
+      inner += `<text x="6" y="${PT + ch / 2}" text-anchor="middle" fill="rgba(106,154,120,0.45)" font-size="5" font-family="monospace" transform="rotate(-90,6,${PT + ch / 2})">CEP (m)</text>`;
+
+      svg.innerHTML = inner;
+    }
+
+    // Sync sliders to current scenario's default sigmas
+    function syncSlidersToScenario() {
+      const cur = state.frames[state.scenarioIndex];
+      if (!cur) return;
+      const e  = cur.entry;
+      const stMs = e.input_errors?.time_ms_max  ?? 6.6;
+      const spM  = e.input_errors?.position_m_max ?? 11.8;
+      document.getElementById("sigTSlider").value = sigTToSlider(Math.max(SIGT_MIN_MS, stMs));
+      document.getElementById("sigPSlider").value  = sigPToSlider(spM);
+      document.getElementById("sigTVal").textContent = formatSigT(stMs);
+      document.getElementById("sigPVal").textContent = formatSigP(spM);
+      updateLiveReadout(e);
+      _sweepData = []; // invalidate sweep cache
+      _sweepSigP = null;
+      fetchSweep().then(drawMoneyCurve);
     }
 
     function setTimelineLoadError(msg) {
-      document.getElementById("timelinePhase").textContent = "DATA NOT LOADED";
-      document.getElementById("timelineEvent").textContent = msg;
-      document.getElementById("timelineBar").style.width   = "0%";
+      const phaseEl = document.getElementById("phaseLabelTxt");
+      if (phaseEl) phaseEl.textContent = "DATA NOT LOADED";
+      const infoEl = document.getElementById("phaseInfo");
+      if (infoEl) infoEl.textContent = msg;
     }
 
     async function loadLocalizations() {
-      document.getElementById("timelineEvent").textContent = "Loading…";
+      const infoEl = document.getElementById("phaseInfo");
+      if (infoEl) infoEl.textContent = "Loading…";
 
       if (location.protocol === "file:") {
         const msg = "Open http://localhost:8080/ui/index.html (not file://)";
@@ -1720,7 +2903,7 @@
         state.mode          = "localize";
         document.getElementById("btnLocalize").classList.add("active");
         document.getElementById("btnDemo").classList.remove("active");
-        startPlayback();
+        startStepEngine();
         addLog(`Loaded ${data.length} events from ${usedUrl}`, "ok");
         setWsStatus(false, "LOCALIZE");
         return true;
@@ -1744,7 +2927,7 @@
         syncMapView(DEMO_BOUNDS);
         entityLayer.classList.remove("live-mission");
       } else if (mode === "localize") {
-        if (state.frames.length) startPlayback();
+        if (state.frames.length) startStepEngine();
         else loadLocalizations();
       }
     }
@@ -1807,73 +2990,339 @@
         `LAT ${lat}°N · LON ${lon}°E · HDG ${Math.floor((demoT * 80) % 360)}°`;
     }
 
-    // ─── Target stack ─────────────────────────────────────────────────────
-    function buildTargetStack() {
-      const root = document.getElementById("targetStack");
-      if (!root || !state.frames.length) return;
-      root.innerHTML = "";
+    // ─── Session 10 — Sandbox engine ─────────────────────────────────────
 
-      // Sort frames by threat_priority descending for display order
-      const sorted = state.frames
-        .map((f, i) => ({ f, i }))
-        .sort((a, b) => b.f.entry.threat_priority - a.f.entry.threat_priority);
+    const SB_API = "/api/sandbox";
 
-      for (const { f, i } of sorted) {
-        const e   = f.entry;
-        const fa  = f.meta.falseAlarm;
-        const act = e.recommended_action || "HOLD";
-        const chipClass = fa ? "fa" : (act === "STRIKE" ? "strike" : act === "RECON" ? "recon" : "hold");
-        const chipLabel = fa ? "F/A" : act;
-
-        const row = document.createElement("div");
-        row.className   = "stack-row";
-        row.dataset.idx = i;
-        row.innerHTML   = `
-          <div class="stack-rank">#${sorted.indexOf(sorted.find(s => s.i === i)) + 1}</div>
-          <div class="stack-info">
-            <div class="stack-title">${f.meta.title}</div>
-            <div class="stack-cep">CEP50 ${e.cep50_m}m · GDOP ${e.gdop}</div>
-          </div>
-          <div class="action-chip ${chipClass}">${chipLabel}</div>`;
-        row.addEventListener("click", () => jumpToScenario(i));
-        root.appendChild(row);
-      }
-      updateTargetStack();
+    // Convert lat/lon → normalised (0..1) relative to current geoBounds
+    function latLonToNorm_sb(lat, lon) {
+      const b = state.geoBounds || DEMO_BOUNDS;
+      return {
+        nx: (lon - b.minLon) / (b.maxLon - b.minLon),
+        ny: (b.maxLat - lat) / (b.maxLat - b.minLat),
+      };
     }
 
-    function updateTargetStack() {
-      document.querySelectorAll(".stack-row").forEach((row) => {
-        row.classList.toggle("active",
-          parseInt(row.dataset.idx) === state.playback.index);
+    // Haversine distance in metres between two lat/lon points
+    function haversineM(lat1, lon1, lat2, lon2) {
+      const R = 6_371_000;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat/2)**2 +
+                Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
+      return 2 * R * Math.asin(Math.sqrt(a));
+    }
+
+    // Enter sandbox from the current scenario's drone/source geometry
+    function enterSandboxMode(scenarioIdx) {
+      if (!state.frames.length) return;
+      const idx = (scenarioIdx !== undefined) ? scenarioIdx : state.scenarioIndex;
+      initSandboxFromScenario(idx);
+      state.sandboxMode = true;
+      entityLayer.classList.add("sandbox-mode");
+      document.getElementById("sbBanner").classList.add("visible");
+      document.getElementById("btnSandbox").textContent = "EXIT SANDBOX";
+      document.getElementById("btnSandbox").classList.add("danger");
+      addLog("Sandbox mode — drag drones or source, fix updates live", "ok");
+      scheduleSandboxFetch(0);
+    }
+
+    function exitSandboxMode() {
+      state.sandboxMode    = false;
+      state.sandboxDrones  = [];
+      state.sandboxSource  = null;
+      state.sandboxEstimate = null;
+      state.sandboxError_m = null;
+      entityLayer.classList.remove("sandbox-mode");
+      document.getElementById("sbBanner").classList.remove("visible");
+      document.getElementById("btnSandbox").textContent = "ENTER SANDBOX";
+      document.getElementById("btnSandbox").classList.remove("danger");
+      document.getElementById("sbStat").textContent = "Drag drones & source to compute live fix";
+      // Remove sandbox entities
+      for (const [id, el] of [...entityEls.entries()]) {
+        if (el.classList.contains("sb-drone") || el.classList.contains("sb-source")) {
+          el.remove(); entityEls.delete(id);
+        }
+      }
+    }
+
+    // Seed sandbox geometry from a loaded localize scenario
+    function initSandboxFromScenario(idx) {
+      const f  = state.frames[idx];
+      const b  = state.geoBounds || DEMO_BOUNDS;
+
+      // Drones — use the scenario's drone list
+      state.sandboxDrones = f.drones.map((d, i) => {
+        const { nx, ny } = latLonToNorm_sb(d.lat, d.lon);
+        return { id: `sb-drone-${i}`, lat: d.lat, lon: d.lon, nx, ny };
+      });
+
+      // Source — use the TDOA estimate lat/lon as starting truth
+      const tgt = f.target;
+      const { nx: snx, ny: sny } = latLonToNorm_sb(tgt.lat, tgt.lon);
+      state.sandboxSource = { lat: tgt.lat, lon: tgt.lon, nx: snx, ny: sny };
+      state.sandboxLabel  = f.entry?.label || "gunshot";
+      state.sandboxEstimate = null;
+      state.sandboxError_m  = null;
+
+      renderSandboxEntities();
+    }
+
+    // Rebuild draggable entity DOM for sandbox drones + source
+    function renderSandboxEntities() {
+      // Clear existing sandbox entities
+      for (const [id, el] of [...entityEls.entries()]) {
+        if (el.classList.contains("sb-drone") || el.classList.contains("sb-source")) {
+          el.remove(); entityEls.delete(id);
+        }
+      }
+
+      // Spawn source entity (star/target icon)
+      if (state.sandboxSource) {
+        const src = state.sandboxSource;
+        const el  = document.createElement("div");
+        el.className  = "entity sb-source";
+        el.dataset.id = "sb-source";
+        el.innerHTML  = `<svg viewBox="0 0 32 32" width="28" height="28" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="16,2 20,12 31,12 22,19 25,30 16,23 7,30 10,19 1,12 12,12"
+                   fill="#e8a838" stroke="#c47a10" stroke-width="1.5" opacity="0.92"/>
+        </svg>`;
+        el.title = "Source — drag to reposition";
+        attachSandboxDragHandler(el, "source");
+        entityEls.set("sb-source", el);
+        entityLayer.appendChild(el);
+      }
+
+      // Spawn drone entities
+      for (const d of state.sandboxDrones) {
+        const el = document.createElement("div");
+        el.className  = "entity sb-drone";
+        el.dataset.id = d.id;
+        el.innerHTML  = ICONS.drone || `<svg viewBox="0 0 32 32" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="16" cy="16" r="12" fill="#4fd87a" stroke="#2a9a54" stroke-width="2" opacity="0.85"/>
+          <text x="16" y="20" text-anchor="middle" font-size="11" fill="#0a120c" font-weight="bold">D</text>
+        </svg>`;
+        el.title = `${d.id} — drag to reposition`;
+        attachSandboxDragHandler(el, d.id);
+        entityEls.set(d.id, el);
+        entityLayer.appendChild(el);
+      }
+    }
+
+    // Attach pointer-capture drag handler to a sandbox entity element
+    function attachSandboxDragHandler(el, entityId) {
+      el.addEventListener("pointerdown", (ev) => {
+        if (!state.sandboxMode) return;
+        ev.stopPropagation();
+        el.setPointerCapture(ev.pointerId);
+        el.classList.add("dragging");
+
+        function onMove(mv) {
+          const rect  = entityLayer.getBoundingClientRect();
+          const px    = mv.clientX - rect.left;
+          const py    = mv.clientY - rect.top;
+          const latlng = leafletMap.containerPointToLatLng([px, py]);
+          const { nx, ny } = latLonToNorm_sb(latlng.lat, latlng.lng);
+
+          if (entityId === "source") {
+            state.sandboxSource.lat = latlng.lat;
+            state.sandboxSource.lon = latlng.lng;
+            state.sandboxSource.nx  = nx;
+            state.sandboxSource.ny  = ny;
+          } else {
+            const d = state.sandboxDrones.find(x => x.id === entityId);
+            if (d) { d.lat = latlng.lat; d.lon = latlng.lng; d.nx = nx; d.ny = ny; }
+          }
+          scheduleSandboxFetch(250);  // debounced fetch after drag moves
+        }
+
+        function onUp() {
+          el.classList.remove("dragging");
+          el.removeEventListener("pointermove", onMove);
+          el.removeEventListener("pointerup",   onUp);
+          scheduleSandboxFetch(0);    // immediate fetch on release
+        }
+
+        el.addEventListener("pointermove", onMove);
+        el.addEventListener("pointerup",   onUp);
       });
     }
 
-    function jumpToScenario(frameIndex) {
-      if (frameIndex === state.playback.index) return;
-      clearTargetStyles();
-      hideRoeBanner();
-      hideNextButton();
-      hideReconFeed();
-      hideScenarioIntro();
-      const pb      = state.playback;
-      pb.prevIndex  = pb.index;
-      pb.index      = frameIndex;
-      pb.phase      = "transit";
-      pb.phaseT     = 0;
-      pb.patrolT    = 0;
-      pb.localizeLogged = false;
-      pb.holdLogged     = false;
-      pb.reconDrone     = null;
-      pb.telemetryFired = new Set();
-      pb.feedShown      = false;
-      pb.holdProgressMs = 0;
-      state.targets    = [];
-      state.cloud      = [];
-      state.cloudAlpha = 0;
-      const next = state.frames[frameIndex];
-      showScenarioIntro(next, frameIndex, state.frames.length);
-      syncMapView(next.bounds);
-      addLog(`Jumped to: ${next.meta.title}`, "ok");
+    // Schedule a sandbox API fetch — resets debounce timer
+    function scheduleSandboxFetch(delayMs) {
+      state.sandboxFetchTimer = delayMs;
+    }
+
+    // Tick sandbox: count down debounce timer, fire fetch when ready
+    function tickSandbox(dt) {
+      if (!state.sandboxMode) return;
+
+      if (state.sandboxFetchTimer > 0) {
+        state.sandboxFetchTimer -= dt;
+        if (state.sandboxFetchTimer <= 0) {
+          state.sandboxFetchTimer = 0;
+          runSandboxFetch();
+        }
+      }
+
+      // Reposition sandbox entity DOM elements each frame
+      if (state.sandboxSource) {
+        const el = entityEls.get("sb-source");
+        if (el) {
+          const p = normToPixel(state.sandboxSource.nx, state.sandboxSource.ny);
+          el.style.left = p.x + "px";
+          el.style.top  = p.y + "px";
+        }
+      }
+      for (const d of state.sandboxDrones) {
+        const el = entityEls.get(d.id);
+        if (el) {
+          const p = normToPixel(d.nx, d.ny);
+          el.style.left = p.x + "px";
+          el.style.top  = p.y + "px";
+        }
+      }
+    }
+
+    // Draw truth→estimate dashed error line + markers on canvas
+    function drawSandboxOverlay() {
+      if (!state.sandboxMode) return;
+
+      // Draw lines from each sandbox drone to the source
+      ctx.save();
+      ctx.setLineDash([3, 5]);
+      ctx.strokeStyle = "rgba(79,216,122,0.22)";
+      ctx.lineWidth   = 1;
+      if (state.sandboxSource) {
+        const sp = normToPixel(state.sandboxSource.nx, state.sandboxSource.ny);
+        for (const d of state.sandboxDrones) {
+          const dp = normToPixel(d.nx, d.ny);
+          ctx.beginPath();
+          ctx.moveTo(sp.x, sp.y);
+          ctx.lineTo(dp.x, dp.y);
+          ctx.stroke();
+        }
+      }
+      ctx.setLineDash([]);
+
+      // Draw truth→estimate error line
+      if (state.sandboxSource && state.sandboxEstimate) {
+        const sp = normToPixel(state.sandboxSource.nx, state.sandboxSource.ny);
+        const ep = normToPixel(state.sandboxEstimate.nx, state.sandboxEstimate.ny);
+
+        ctx.strokeStyle = "rgba(232,168,56,0.82)";
+        ctx.lineWidth   = 1.5;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(sp.x, sp.y);
+        ctx.lineTo(ep.x, ep.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Estimate cross-hair
+        ctx.strokeStyle = "rgba(232,168,56,0.9)";
+        ctx.lineWidth   = 2;
+        const R = 7;
+        ctx.beginPath();
+        ctx.moveTo(ep.x - R, ep.y); ctx.lineTo(ep.x + R, ep.y);
+        ctx.moveTo(ep.x, ep.y - R); ctx.lineTo(ep.x, ep.y + R);
+        ctx.stroke();
+
+        // Error label near midpoint
+        const mx = (sp.x + ep.x) / 2;
+        const my = (sp.y + ep.y) / 2;
+        ctx.font = "bold 10px 'JetBrains Mono', monospace";
+        ctx.fillStyle = "rgba(232,168,56,0.9)";
+        ctx.textAlign = "center";
+        ctx.fillText(`${Math.round(state.sandboxError_m)}m error`, mx, my - 6);
+      }
+      ctx.restore();
+    }
+
+    // Call POST /api/sandbox and update state with the result
+    async function runSandboxFetch() {
+      if (!state.sandboxSource || state.sandboxDrones.length < 2) return;
+      if (state.sandboxFetching) return;
+
+      state.sandboxFetching = true;
+      const sigT   = parseFloat(document.getElementById("sigTSlider").dataset.sigmaMs  || "1");
+      const sigPos = parseFloat(document.getElementById("sigPSlider").dataset.sigmaPosM || "5");
+
+      const body = {
+        drones:      state.sandboxDrones.map(d => ({ drone_id: d.id, lat: d.lat, lon: d.lon })),
+        source:      { lat: state.sandboxSource.lat, lon: state.sandboxSource.lon },
+        sigma_t_ms:  isNaN(sigT)   ? 1.0  : sigT,
+        sigma_pos_m: isNaN(sigPos) ? 5.0  : sigPos,
+        label:       state.sandboxLabel,
+      };
+
+      try {
+        const resp = await fetch(SB_API, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+
+        if (data.lat != null && data.lon != null) {
+          const { nx, ny } = latLonToNorm_sb(data.lat, data.lon);
+          state.sandboxEstimate = { lat: data.lat, lon: data.lon, nx, ny };
+          const truthLat = data.sandbox_truth?.lat ?? state.sandboxSource.lat;
+          const truthLon = data.sandbox_truth?.lon ?? state.sandboxSource.lon;
+          state.sandboxError_m = haversineM(truthLat, truthLon, data.lat, data.lon);
+
+          const cep = data.cep50_m != null ? `${Math.round(data.cep50_m)}m` : "?";
+          document.getElementById("sbStat").textContent =
+            `CEP50 ${cep} · error ${Math.round(state.sandboxError_m)}m · ${data.recommended_action || "—"}`;
+        }
+      } catch (e) {
+        document.getElementById("sbStat").textContent = `API error: ${e.message}`;
+      } finally {
+        state.sandboxFetching = false;
+      }
+    }
+
+    // ─── Scenario cards ───────────────────────────────────────────────────
+    function buildScenarioCards() {
+      const root = document.getElementById("scenarioCards");
+      if (!root || !state.frames.length) return;
+      root.innerHTML = "";
+      for (let i = 0; i < state.frames.length; i++) {
+        const f   = state.frames[i];
+        const e   = f.entry;
+        const fa  = f.meta.falseAlarm;
+        const act = e.recommended_action || "HOLD";
+        const chipClass = fa ? "fa" : (act === "STRIKE" ? "strike" : act === "RECON" ? "recon" : act === "SEARCH" ? "search" : "hold");
+        const chipLabel = fa ? "F/A" : act;
+
+        const card = document.createElement("div");
+        card.className   = "sc-card";
+        card.dataset.idx = i;
+        card.innerHTML   = `
+          <div class="sc-card-header">
+            <span class="sc-num">0${i + 1}</span>
+            <span class="sc-title">${f.meta.title}</span>
+            <span class="action-chip ${chipClass}">${chipLabel}</span>
+            <button class="sc-sandbox-btn" title="Open in Sandbox" data-sbidx="${i}">⊞</button>
+          </div>
+          <div class="sc-cep">CEP50 ${e.cep50_m}m · GDOP ${e.gdop}</div>`;
+        card.querySelector(".sc-sandbox-btn").addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          enterSandboxMode(parseInt(ev.currentTarget.dataset.sbidx));
+        });
+        card.addEventListener("click", () => setScenario(i));
+        root.appendChild(card);
+      }
+      root.classList.add("ready");     // reveals .sc-sandbox-btn via CSS
+      updateScenarioCards();
+    }
+
+    function updateScenarioCards() {
+      document.querySelectorAll(".sc-card").forEach((card) => {
+        card.classList.toggle("active",
+          parseInt(card.dataset.idx) === state.scenarioIndex);
+      });
     }
 
     // ─── UI helpers ───────────────────────────────────────────────────────
@@ -1885,16 +3334,6 @@
       el.textContent = `[${ts}] ${msg}`;
       log.prepend(el);
       while (log.children.length > 80) log.lastChild.remove();
-    }
-
-    function buildLegend() {
-      const root = document.getElementById("legend");
-      for (const item of LEGEND_ITEMS) {
-        const row = document.createElement("div");
-        row.className = "legend-item";
-        row.innerHTML = `${ICONS[item.key]}<span>${item.label}</span>`;
-        root.appendChild(row);
-      }
     }
 
     function resize() {
@@ -1925,14 +3364,16 @@
       document.getElementById("statFps").textContent = state.fps;
 
       if (state.mode === "demo")     runDemo(dt);
-      if (state.mode === "localize") tickPlayback(dt);
+      if (state.mode === "localize") tickStep(dt);
+      if (state.sandboxMode)         tickSandbox(dt);
 
       // Clear the transparent canvas overlay each frame
       // (terrain is now the real Leaflet map underneath)
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      if (state.mode === "localize") drawConfidenceCloud();
+      if (state.mode === "localize") { drawConfidenceCloud(); drawCepCircle(); }
       drawPulses();
+      drawSandboxOverlay();
 
       renderEntities();
 
@@ -1940,9 +3381,8 @@
     }
 
     // ─── Init ─────────────────────────────────────────────────────────────
-    buildLegend();
-    addLog("Tactical map ready — MML Maastokartta + Rinnevarjostus", "ok");
-    addLog("LOCALIZE: auto timeline from localizations.json", "ok");
+    addLog("Tactical Edge ready — MML Maastokartta + Rinnevarjostus", "ok");
+    addLog("Click a scenario card or press → to begin", "ok");
 
     window.addEventListener("resize", resize);
     resize();
@@ -1959,23 +3399,53 @@
       setMode("localize");
       addLog("Localize mode active", "ok");
     });
-    document.getElementById("btnPause").addEventListener("click", () => {
-      state.playback.paused = !state.playback.paused;
-      const btn = document.getElementById("btnPause");
-      btn.textContent = state.playback.paused ? "RESUME" : "PAUSE";
-      btn.classList.toggle("active", state.playback.paused);
-      addLog(state.playback.paused ? "Timeline paused" : "Timeline resumed", "ok");
-    });
-    document.getElementById("btnRetry").addEventListener("click", () => {
-      setMode("localize");
-      loadLocalizations();
+
+    // Sigma sliders (Session 8)
+    document.getElementById("sigTSlider").addEventListener("input", onSliderInput);
+    document.getElementById("sigPSlider").addEventListener("input", onSliderInput);
+
+    // Session 10 — Sandbox toggle
+    document.getElementById("btnSandbox").addEventListener("click", () => {
+      if (state.sandboxMode) {
+        exitSandboxMode();
+      } else {
+        if (!state.frames.length) {
+          addLog("Load a scenario first before entering sandbox", "warn");
+          return;
+        }
+        enterSandboxMode(state.scenarioIndex);
+      }
     });
 
-    document.getElementById("btnNext").addEventListener("click", () => {
-      if (state.playback.phase === "hold") {
-        advancePlaybackPhase();
-        addLog("Advancing to next scenario…", "ok");
+    // Phase control buttons
+    document.getElementById("btnPrev").addEventListener("click", () => {
+      prevPhase();
+    });
+    document.getElementById("btnNextPhase").addEventListener("click", () => {
+      nextPhase();
+    });
+    document.getElementById("btnAuto").addEventListener("click", () => {
+      state.autoplay = !state.autoplay;
+      document.getElementById("btnAuto").classList.toggle("auto-active", state.autoplay);
+      addLog(state.autoplay ? "Auto-advance ON" : "Auto-advance OFF", "ok");
+    });
+    document.getElementById("btnReset").addEventListener("click", () => {
+      resetScenario();
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener("keydown", (ev) => {
+      if (ev.target.tagName === "INPUT") return;
+      if (ev.key === "ArrowRight") { ev.preventDefault(); nextPhase(); }
+      if (ev.key === "ArrowLeft")  { ev.preventDefault(); prevPhase(); }
+      if (ev.key === " ")          { ev.preventDefault();
+        state.autoplay = !state.autoplay;
+        document.getElementById("btnAuto").classList.toggle("auto-active", state.autoplay);
+        addLog(state.autoplay ? "Auto-advance ON" : "Auto-advance OFF", "ok");
+        updatePhaseUI();
       }
+      if (ev.key === "r" || ev.key === "R") { ev.preventDefault(); resetScenario(); }
+      if (ev.key === "Escape" && state.sandboxMode) { ev.preventDefault(); exitSandboxMode(); }
     });
 
     loadLocalizations();

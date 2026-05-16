@@ -23,11 +23,22 @@ they can run in parallel.
 ```
 Session 1 (ROE)  ─┬─→  Session 3 (Respond anim) ──→  Session 4 (Recon UI)
                   ├─→  Session 5 (Multi-threat)
+                  └─→  Session 18 (Live Ops tab)
 Session 2 (Jam)  ─┴─→  Session 5 (Multi-threat)
 Session 6 (Mesh narrative)   — independent, anytime
+Session 7 (Audio)            — independent, anytime (frontend only)
+
+Session 18 (Live Ops tab) depends on:
+  Session 7  (tab framework — see SESSIONS_INTERACTIVE.md)
+  Session 8  (Flask backend — see SESSIONS_INTERACTIVE.md)
+  Session 11 (2-drone hyperbola — see ROADMAP.md "New session specifications")
+  Session 13 (kill-drone button — see ROADMAP.md "New session specifications")
+  Session 14 (source icon + cones — see ROADMAP.md "New session specifications")
 ```
 
-Recommended order if implementing sequentially: 1, 2, 3, 4, 5, 6.
+Recommended order if implementing sequentially: 1, 2, 3, 4, 5, 6, 7, 18.
+Session 18 picks up after Sessions 7–14 are integrated (sandbox tab,
+sliders, 2-drone math, kill button, source icon all in place).
 
 ---
 
@@ -740,14 +751,765 @@ The document has three sections:
 
 ---
 
+## Session 7 — Ambient & Event Audio (Frontend)
+
+### Goal
+
+Play synchronised audio during the demo. Three layered channels:
+
+1. **Forest ambient** — background crickets, birdsong and forest atmos at
+   low volume, running continuously from the first frame.
+2. **Drone patrol buzz** — looping UAV sound during `transit` and `listen`
+   phases; cross-fades to silence as `localize` begins (acoustic silence
+   sells the "we just found the source" moment).
+3. **Event detonation** — plays the detected-event sound **once** at the
+   moment the target pin appears (`localize`, `t = 0.4`); the specific
+   clip is chosen by `entry.label`.
+
+No external libraries. Use the browser **Web Audio API** only
+(`AudioContext`, `GainNode`, `AudioBufferSourceNode`).
+
+### Audio files
+
+All paths are relative to the repo root and served by
+`python3 -m http.server 8080`. The UI fetches them via relative URLs
+(`../data/...` from `ui/index.html`).
+
+| Role | File |
+|---|---|
+| Drone patrol (loop) | `data/samples/drone/uas_drone_pass_dcpoke.wav` |
+| Event — tank | `data/samples/tank/kakaist-tank-moving-sfx-319878.mp3` |
+| Event — gunshot | `data/samples/gunshot/demo_gunshot_128293.wav` |
+| Event — missile_launch | `data/samples/missile_launch/ucas_launch_x47b_qubodup.flac` |
+| Ambient — forest atmos | `data/samples/missile_launch/forest/730223_klankbeeld_forest-in-the-netherlands-320-pm-230328_572.wav` |
+| Ambient — birds | `data/ESC-50/audio/1-100038-A-14.wav` |
+| Ambient — crickets | `data/ESC-50/audio/1-57316-A-13.wav` |
+
+**Drone clip must loop seamlessly** — set `AudioBufferSourceNode.loop = true`
+and optionally set `loopStart`/`loopEnd` to trim any click at the tail.
+
+**FLAC note**: `ucas_launch_x47b_qubodup.flac` plays natively in
+Chromium/Chrome and Safari (macOS). Firefox on Windows may not decode it.
+If the demo machine is Windows + Chrome, no action needed. If cross-browser
+support is required, convert the FLAC to WAV offline before the demo:
+```
+ffmpeg -i ucas_launch_x47b_qubodup.flac ucas_launch_x47b_qubodup.wav
+```
+
+### Architecture
+
+```
+AudioEngine (singleton in index.html)
+│
+├── ctx          AudioContext (lazy-created on first user gesture)
+│
+├── ambientGain  GainNode  ← birds + crickets + forest atmos play here
+│                            target volume: 0.18
+│
+├── droneGain    GainNode  ← looping drone clip
+│                            fade in on transit/listen, out on localize
+│                            target volume: 0.55 while active, 0 while silent
+│
+└── eventGain    GainNode  ← one-shot event sound
+                             plays once per scenario at localize t=0.4
+                             target volume: 1.0 (no fade — it should punch)
+```
+
+All three `GainNode`s connect to `ctx.destination`.
+
+Volume changes use `gain.linearRampToValueAtTime()` with a 0.8 s ramp
+so there are no clicks.
+
+### Files touched
+
+- Modified: `ui/index.html` only
+
+### Tasks
+
+1. **`AudioEngine` object** — add as a module-level singleton at the top
+   of the `<script>` block:
+   ```js
+   const AudioEngine = {
+     ctx: null,
+     buffers: {},         // label → AudioBuffer
+     ambientSources: [],  // running ambient source nodes
+     droneSource: null,
+     ambientGain: null,
+     droneGain: null,
+     eventGain: null,
+   };
+   ```
+
+2. **`AudioEngine.init()`** — call once on first user interaction
+   (attach to any existing button click; reuse the first `btnPause`,
+   `btnDemo`, or `btnLocalize` listener):
+   - `AudioEngine.ctx = new AudioContext()`
+   - Create the three `GainNode`s and wire to `ctx.destination`
+   - Fetch and decode **all** audio files via `fetchBuffer(url)`
+   - Start the three ambient clips (birds, crickets, forest atmos) on
+     `ambientGain` with `loop = true`
+   - Start the drone clip on `droneGain` with `loop = true`,
+     initial gain `0` (silent until transit starts)
+
+3. **`fetchBuffer(url)`** helper:
+   ```js
+   async function fetchBuffer(url) {
+     const res = await fetch(url);
+     const ab  = await res.arrayBuffer();
+     return AudioEngine.ctx.decodeAudioData(ab);
+   }
+   ```
+   Wrap in try/catch; log a warning to the event log if a file 404s —
+   don't crash the whole UI.
+
+4. **Phase-linked volume changes** — hook into the existing
+   `advancePlaybackPhase()` function (already called on each phase
+   transition):
+   ```js
+   // In advancePlaybackPhase(), after pb.phase is updated:
+   AudioEngine.onPhase(pb.phase, cur.entry.label);
+   ```
+
+   ```js
+   AudioEngine.onPhase = function(phase, label) {
+     if (!this.ctx) return;
+     const now = this.ctx.currentTime;
+     const RAMP = 0.8;   // seconds
+     if (phase === "transit" || phase === "listen") {
+       this.droneGain.gain.linearRampToValueAtTime(0.55, now + RAMP);
+     } else {
+       this.droneGain.gain.linearRampToValueAtTime(0.0, now + RAMP);
+     }
+   };
+   ```
+
+5. **Event sound trigger** — in the `localize` branch of
+   `tickPlayback(dt)`, at the moment `pb.localizeLogged` transitions
+   from false to true (same gate already used for the sonar pulse):
+   ```js
+   AudioEngine.playEvent(cur.entry.label);
+   ```
+
+   ```js
+   AudioEngine.playEvent = function(label) {
+     if (!this.ctx) return;
+     const MAP = {
+       gunshot:        "gunshot",
+       missile_launch: "missile",
+       tank:           "tank",
+       drone:          "drone",   // hostile drone — reuse clip
+     };
+     const key = MAP[label];
+     if (!key || !this.buffers[key]) return;
+     const src = this.ctx.createBufferSource();
+     src.buffer = this.buffers[key];
+     src.connect(this.eventGain);
+     src.start();
+   };
+   ```
+
+6. **Demo-mode audio** — when the user hits DEMO:
+   - Drone buzz fades in immediately (drone is on screen).
+   - No event sounds (demo has no real `entry.label`).
+
+7. **Mute / unmute button** — add a small `🔇 MUTE` button to the
+   left panel (below the WebSocket section). Toggling it sets
+   `ctx.destination.gain` to 0 / 1, or simply suspends / resumes the
+   `AudioContext`. Label it `MUTE` / `UNMUTE`. Keep it minimal.
+
+8. **Graceful degradation** — if `AudioContext` is not available
+   (old browser) or any `fetch` fails, the UI must continue working.
+   Wrap all audio code in try/catch. Log failures to the event log at
+   `warn` level: `"Audio: failed to load <file>"`.
+
+### Considerations
+
+- **💡 NOTE: AudioContext requires a user gesture.** Browsers block
+  audio autoplay. Do not call `new AudioContext()` on page load. Call
+  it inside an existing button handler (`btnLocalize`, `btnDemo`, or
+  `btnPause`) — the first click is enough. After `init()`, subsequent
+  phase changes can trigger audio freely.
+- **💡 NOTE: loop the drone clip, not the event clips.** The drone
+  clip (`uas_drone_pass_dcpoke.wav`) is a short pass-by recording.
+  `loop = true` makes it continuous. Event clips (gunshot, missile,
+  tank) are one-shot — do not loop them.
+- **💡 NOTE: keep the three ambient sources running at all times.**
+  Starting and stopping them per-phase causes audible clicks. Instead,
+  vary only the gain. The ambient gain can be nudged lower during
+  `localize` and `hold` to let the event punch through, then back up
+  for `transit`.
+- **💡 NOTE: the forest atmos file is long.** Use it as the primary
+  ambient layer. Birds and crickets from ESC-50 are short loops (~5 s);
+  they provide variation on top.
+- **💡 NOTE: the FLAC will decode fine in Chrome.** Don't pre-convert
+  unless the demo machine is confirmed non-Chromium.
+- Keep total added JS under ~80 lines. This is glue code, not a DAW.
+
+### ⚠ HUMAN INPUT NEEDED
+
+1. **Volume balance** — the suggested levels (ambient 0.18, drone 0.55,
+   event 1.0) are starting points. Tune by ear before the pitch.
+   Ask the user to confirm after a first listen.
+2. **Should the drone buzz play in LOCALIZE mode even when the current
+   scenario label is `"drone"` (hostile drone)?** Ambiguous — a hostile
+   drone sounds similar to a sensor drone. Suggested: yes, play it
+   regardless, since the acoustic scene is "drones are in the air".
+   Confirm.
+3. **Mute button placement** — suggested: bottom of the left panel.
+   If the panel is already crowded, a small icon-only button in the
+   header is acceptable.
+4. **Should the ambient layer also fade during the event sound?** A
+   brief ambient duck (−6 dB for 1 s) makes the event punchier.
+   Suggested: yes. Confirm before implementing.
+
+### Acceptance criteria
+
+- Clicking any button for the first time initialises the audio context
+  without errors.
+- Forest ambient (at least one of the three clips) is audible within
+  2 s of the first button press.
+- Drone buzz is audible during `transit` and `listen` phases, silent
+  during `localize` and `hold`.
+- The correct event sound plays once when the target pin appears, with
+  no repeats within the same scenario.
+- MUTE button silences all audio; pressing it again restores sound.
+- A 404 or decode error on any audio file shows a `warn` log line
+  but does not crash the UI or block the animation loop.
+- `statFps` stays ≥ 55 — audio work is off the main thread via Web
+  Audio; it must not drop frames.
+
+---
+
+## Session 18 — Live Ops tab (live event injection)
+
+### Goal
+
+A new tab `🎮 LIVE OPS` where the demo runs as a continuous, live,
+reactive simulation. **N drones** patrol the map at all times.
+The operator drops events from a sidebar — `🔫 GUNSHOT`, `🚜 TANK`,
+`🚀 MISSILE`, `🦌 WILDLIFE` — by clicking a button then clicking
+the map. The backend computes per-drone detection times from real
+geometry, selects the **3 closest alive drones**, runs the full
+pipeline (math → ROE → response), and the UI animates the result
+in real time. Kill-drone works in this tab too; when 2 drones are
+left, the system gracefully falls back to the 2-drone hyperbola
+fix (Session 11) and forces a SEARCH. No scripted scenarios. No
+pre-baked JSON. This is the "system is actually live" proof.
+
+### Why this matters
+
+Scripted scenario tabs are rehearsed pitch content. Live Ops is the
+"hand-the-laptop-to-the-judge" tab. A judge dropping a gunshot at a
+random location and watching the system react in real time is
+qualitatively different from a replay. It also lights up three
+otherwise abstract stories at once: the **discriminative classifier
+story** (drop a wildlife event → green MONITOR action), the
+**graceful-degradation story** (kill drones mid-engagement → see
+ellipse collapse to hyperbola+wedge → ROE downgrades to SEARCH live),
+and the **N-drone scaling story** (the system picks the best 3 of N,
+not the only 3 it has).
+
+### Dependencies
+
+Hard prerequisites (this session won't function correctly without):
+
+- **Session 7** — Tab bar + phase stepper (this is a new tab in the
+  existing bar; the phase machine drives the live animation too)
+- **Session 8** — Live error sliders + Flask backend (this session
+  extends the Flask backend; the sliders work in Live Ops too)
+- **Session 11** — 2-drone bearing-only localization (this session's
+  graceful-degradation depends on the hyperbola fix existing)
+- **Session 13** — Kill-drone button (this session reuses the
+  killed-drones state machine)
+- **Session 14** — Source icon + acoustic cones (this session reuses
+  the cone-emission visual machinery)
+
+Soft prerequisites (nice-to-have but Live Ops works without):
+
+- **Session 15** — Ambient (wildlife) triangulation tab (Live Ops
+  ships its own wildlife dropper; if Session 15 is in, the colour
+  conventions match exactly)
+- **Session 12** — Multi-scene narrative tab (independent; both can
+  coexist as separate tabs)
+
+### Files touched
+
+- New: `triangulation/live_ops.py` — server-side live state + helpers
+- New: `triangulation/classifier.py` — Classifier protocol + impls
+- Modified: `triangulation/server.py` — adds `/api/live/*` endpoints
+- Modified: `ui/index.html` — new tab, drop sidebar, click handling
+- Modified: `triangulation/locate.py` — minor: nothing functional
+  changes; `localize_scenario` already handles N-row groups
+
+### Architecture
+
+The live state lives **server-side** in a singleton in
+`triangulation/server.py`. The UI is a thin reactive client.
+
+```
+┌─ User clicks 🔫 GUNSHOT, then clicks map at (lat, lon) ───────────────┐
+│                                                                       │
+│ POST /api/live/event { label: "gunshot", lat, lon }                  │
+│   │                                                                   │
+│   ▼                                                                   │
+│ LiveOpsState.handle_event(label, lat, lon)                           │
+│   │                                                                   │
+│   ├── 1. snapshot drone roster: positions + alive flags              │
+│   │                                                                   │
+│   ├── 2. for each drone, compute event_time_ns:                      │
+│   │        t = base_ns                                                │
+│   │          + ||drone_xy - event_xy|| / C       (real geometry)     │
+│   │          + N(0, sigma_t_s)                   (jitter)            │
+│   │                                                                   │
+│   ├── 3. classifier.classify(truth_label, audio?)                    │
+│   │        → (predicted_label, confidence)                            │
+│   │      [PerfectClassifier returns truth; MLClassifier is a stub]   │
+│   │                                                                   │
+│   ├── 4. select 3 closest ALIVE drones (or 2, or 1, or 0)            │
+│   │                                                                   │
+│   ├── 5. branch by alive count:                                      │
+│   │     ─ ≥ 3 alive → localize_scenario (existing 3-drone math)      │
+│   │     ─ 2 alive  → solver_2drone (Session 11 hyperbola+wedge)      │
+│   │     ─ 1 alive  → return INSUFFICIENT_SENSORS                     │
+│   │     ─ 0 alive  → return INSUFFICIENT_SENSORS (no drones)         │
+│   │                                                                   │
+│   └── 6. return localization-shape entry + per-drone arrival times   │
+│           + predicted_label + true_label                              │
+│                                                                       │
+└───────────────────────────────────────────────────────────────────────┘
+
+┌─ UI receives the result ──────────────────────────────────────────────┐
+│ - immediately play audio for the event (Session 7's AudioEngine)     │
+│ - build an in-memory "frame" from the result (same shape as the      │
+│   pre-baked frames from buildFrames())                                │
+│ - feed the frame to the existing tickPlayback phase machine          │
+│ - per-drone "light up" pulses fire at their real computed arrival    │
+│   times (so you visibly see the wavefront reach drones sequentially) │
+│ - source icon, cloud, action chip, banner — all reuse Session 14    │
+└───────────────────────────────────────────────────────────────────────┘
+```
+
+### State model (server)
+
+```python
+# triangulation/live_ops.py
+
+@dataclass
+class Drone:
+    id: str                                # "drone_1" .. "drone_N"
+    base_lat: float                        # patrol centre
+    base_lon: float
+    alive: bool = True
+    # current patrol position (updated when /api/live/state is polled)
+
+@dataclass
+class LiveEvent:
+    id: str                                # uuid hex
+    label: str                             # "gunshot" | "tank" | "missile_launch" | "wildlife"
+    lat: float
+    lon: float
+    t_drop_ns: int
+    result: dict | None = None             # localizations.json-shape entry
+
+@dataclass
+class LiveOpsState:
+    drones: list[Drone]
+    classifier: Classifier
+    sigma_t_ms: float = 6.0
+    sigma_pos_m: float = 12.0
+    events: list[LiveEvent] = field(default_factory=list)
+    t_start_ns: int = field(default_factory=lambda: time.time_ns())
+
+    def alive_drones(self) -> list[Drone]:
+        return [d for d in self.drones if d.alive]
+```
+
+Single in-process singleton. No persistence to disk (live ops is
+session-scoped). Reset endpoint zeroes the events list and revives
+all drones.
+
+### Classifier abstraction (future-proof for the ML team)
+
+```python
+# triangulation/classifier.py
+
+class Classifier(Protocol):
+    def classify(self, truth_label: str,
+                 audio: bytes | None = None) -> tuple[str, float]:
+        """Return (predicted_label, confidence_in_0_to_1)."""
+        ...
+
+class PerfectClassifier:
+    """v1 default. Always returns the truth with high confidence."""
+    def classify(self, truth, audio=None) -> tuple[str, float]:
+        return truth, 0.95
+
+class MLClassifier:
+    """v2 stub. When the ML team ships a model, plug it in here.
+
+    Should accept a synthesised or real audio sample, run inference,
+    return (predicted_label, confidence). The Live Ops backend
+    doesn't care what's inside this class — it just calls classify().
+    """
+    def __init__(self, model_path: str):
+        # load ONNX / PyTorch / whatever
+        raise NotImplementedError("ML classifier not yet shipped")
+    def classify(self, truth, audio) -> tuple[str, float]:
+        raise NotImplementedError
+```
+
+Switching is via env var or query string:
+`?detection_mode=perfect` (default) | `?detection_mode=ml`.
+
+The UI shows a small badge `DETECTION: perfect` (green) or
+`DETECTION: ML` (blue). The misclassification narrative — drop a
+tank, classifier guesses "drone" → recon dispatched → reclassified
+correctly as "tank" → ROE escalates — naturally lights up once
+`MLClassifier` is real. v1 ships perfect-only.
+
+### Drone roster + patrol
+
+Default: 5 drones in a loose pentagon centred on
+`(62.412, 25.752)`, radius ~150 m. Patrol motion is a slow
+sinusoidal drift (~30 m amplitude, ~20 s period) computed
+server-side; the UI polls position every 500 ms and lerps for
+smoothness.
+
+```python
+def patrol_position(drone: Drone, t_now_ns: int) -> tuple[float, float]:
+    """Slow sinusoidal drift around base. Visual only."""
+    t_s = t_now_ns / 1e9
+    seed = int(hashlib.md5(drone.id.encode()).digest()[0])
+    dlat = 0.0003 * math.sin(t_s / 5.0 + seed)        # ~30 m
+    dlon = 0.0003 * math.cos(t_s / 6.5 + seed * 2)
+    return drone.base_lat + dlat, drone.base_lon + dlon
+```
+
+Drone count is configurable via `/api/live/config` (3..10 supported).
+
+### N-drone selection: pick best 3
+
+```python
+def select_drones_for_event(event_lat, event_lon,
+                            alive_drones: list[Drone],
+                            max_drones: int = 3) -> list[Drone]:
+    """Return the 3 (or fewer) alive drones closest to the event.
+
+    Distance computed in the local plane (equirectangular projection
+    around the event point, accurate enough for ~1 km).
+    """
+    if not alive_drones:
+        return []
+    def dist(d: Drone) -> float:
+        return distance_m(d.last_lat, d.last_lon, event_lat, event_lon)
+    return sorted(alive_drones, key=dist)[:max_drones]
+```
+
+The existing `localize_scenario(group)` already accepts any list of
+event rows; it doesn't hardcode "3 drones". So this selection step
+is the only new logic between live drone roster and the math.
+
+### 2-drone fallback
+
+When `len(alive_drones) == 2`:
+
+- The 3-drone solver would crash (or return garbage).
+- Instead, call `solver_2drone.hyperbola_fix(events, drone_positions)`
+  from Session 11.
+- ROE policy automatically forces SEARCH (you can't STRIKE on a
+  curve — Session 11 already enforces this).
+- UI renders the hyperbola curve + wedge band instead of an ellipse,
+  using Session 11's frontend renderer.
+
+### 1-drone or 0-drone fallback
+
+- 1 alive: return an output entry with `fix_kind: "none"`,
+  `recommended_action: "INSUFFICIENT_SENSORS"`, `source: null`,
+  `cloud_latlon: []`. UI shows a banner: `SENSOR LOSS — fix
+  unavailable. Single-sensor bearing requires RSSI mesh.`
+- 0 alive: same banner; no detection animation at all.
+
+These are not error states — they're real operational outcomes.
+Don't crash; render them honestly.
+
+### Endpoints
+
+| Endpoint | Body | Returns |
+|---|---|---|
+| `POST /api/live/event` | `{label, lat, lon}` | localization entry + arrival_times_per_drone + predicted_label + true_label |
+| `POST /api/live/kill_drone` | `{drone_id}` | `{ok: true, alive_count: N}` |
+| `POST /api/live/revive_drone` | `{drone_id}` | `{ok: true, alive_count: N}` |
+| `POST /api/live/reset` | `{}` | `{ok: true}` (clears events, revives all drones) |
+| `GET /api/live/state` | — | `{drones: [{id, lat, lon, alive}], events_count, classifier_mode}` |
+| `POST /api/live/config` | `{sigma_t_ms?, sigma_pos_m?, detection_mode?, drone_count?}` | `{ok: true, config}` |
+
+All endpoints return JSON. All accept JSON bodies (or query strings
+for `GET`).
+
+### UI: drop UX
+
+Sidebar **replaces** the scenario list when the LIVE OPS tab is
+active. Layout:
+
+```
+┌─ DROP EVENT ──────────────────────────┐
+│  🔫 GUNSHOT          (threat)         │
+│  🚜 TANK             (threat)         │
+│  🚀 MISSILE LAUNCH   (threat)         │
+│  🦌 WILDLIFE         (ambient)        │
+├───────────────────────────────────────┤
+│  💀 KILL DRONE       (per-drone pill) │
+│  ❤️ REVIVE ALL                         │
+│  🔄 RESET ALL                          │
+├───────────────────────────────────────┤
+│  DETECTION: perfect ⓘ                 │
+│  ALIVE: 5/5                            │
+│  EVENTS: 3                             │
+└───────────────────────────────────────┘
+```
+
+Interaction flow:
+
+1. User clicks `🔫 GUNSHOT`. The button enters "armed" state
+   (highlighted border, cursor changes to crosshair over the map).
+2. User clicks anywhere on the map. The screen → lat/lon
+   conversion uses the existing `bounds` projection inverse.
+3. `POST /api/live/event` fires. Cursor reverts. Button un-arms.
+4. Backend responds. UI plays audio + starts phase animation.
+5. Old fix (if any) fades out as the new one starts.
+
+Cancellation:
+
+- `ESC` cancels armed mode.
+- Clicking the same button again cancels.
+- Right-click on map also cancels.
+
+KILL DRONE works the same way: click `💀 KILL DRONE`, then click
+a drone icon. The icon gets the existing red-☓ overlay from
+Session 13.
+
+### No concurrent events (v1)
+
+Per user direction: when a new event drops, the previous fix is
+cleared (fades out over ~500 ms). Only one active fix at a time.
+v2 could add a queue or parallel pipelines; not for v1.
+
+### Audio (fires at drop time)
+
+Per user direction: audio fires the instant the event is dropped,
+not when the wavefront reaches each drone. Reuses Session 7's
+`AudioEngine.playEvent(label)` directly. No new audio code.
+
+The per-drone wavefront-arrival timing still drives the **visual**
+drone-light-up animation (Session 14's acoustic cones radiate from
+the drop point at sound speed). The audio just doesn't sync to it —
+audio fires now, cones radiate physically. Acceptable tradeoff for
+simplicity.
+
+### Tab-switch behaviour
+
+- Switching from LIVE OPS to another tab: **state preserved**
+  server-side. Events list, drone roster, kill states all hold.
+- Switching back: pick up where you were. No animation replays.
+- The kill-drone state from Session 13's other-tabs is **separate**:
+  killing a drone in scripted-tab-1 doesn't kill it in LIVE OPS.
+  LIVE OPS uses `LiveOpsState.drones`; other tabs use their own.
+
+### Default scene
+
+On first activation of LIVE OPS tab (or after RESET ALL):
+
+- 5 drones spawn in a loose pentagon around `(62.412, 25.752)`.
+- Patrol drift starts.
+- Events list is empty.
+- Classifier is `PerfectClassifier`.
+- σ_t = 6.0 ms, σ_pos = 12 m (same as scripted scenario defaults).
+
+### Phase machine reuse
+
+Live Ops doesn't add new phases. It builds a synthetic "frame"
+from the backend response and feeds it to the existing phase loop:
+
+```js
+// On /api/live/event response:
+const fakeFrame = {
+  drones: result.drones_used,            // for entity rendering
+  source: result.source,                 // for source icon
+  cloud_latlon: result.cloud_latlon,     // for cloud rendering
+  cep50_m: result.cep50_m,
+  recommended_action: result.recommended_action,
+  // ... full localizations.json-entry shape ...
+  arrival_times_ms: result.arrival_times_per_drone,  // NEW: for cone timing
+};
+state.activeFrame = fakeFrame;
+state.step = 0;       // PATROL — drones in place
+state.stepProgress = 0;
+state.autoplay = true; // auto-advance through phases for live ops
+```
+
+The phase tick driver does the rest. Phases run at their normal
+durations.
+
+### Per-drone wavefront arrival visualisation
+
+When the cones radiate from the source (Session 14's renderPhase
+`DETECT` branch), each drone lights up when the **leading cone
+radius** crosses its position. With Live Ops, the "arrival time"
+isn't synthetic — it's the real distance/C computed by the backend.
+So the drone-light-up sequence faithfully mirrors physics.
+
+Per-drone label appears: `drone_3   t = +146 ms` (relative to first
+detection), reusing the same machinery as scripted tabs.
+
+### Subtasks
+
+Backend (Python):
+
+- 18.1 `triangulation/classifier.py` with `Classifier` Protocol +
+       `PerfectClassifier` + `MLClassifier` stub (raises NotImplemented).
+- 18.2 `triangulation/live_ops.py` defining `Drone`, `LiveEvent`,
+       `LiveOpsState`. Includes `patrol_position()`,
+       `select_drones_for_event()`, `compute_event_arrivals()`,
+       `handle_event()`.
+- 18.3 `LiveOpsState.handle_event()` orchestrates: snapshot, jitter,
+       select, branch by alive count, call `localize_scenario()` or
+       `solver_2drone.hyperbola_fix()` or return INSUFFICIENT_SENSORS.
+- 18.4 Server endpoint `POST /api/live/event` (returns full
+       localization entry + arrival_times_per_drone).
+- 18.5 Server endpoints `POST /api/live/kill_drone`,
+       `POST /api/live/revive_drone`, `POST /api/live/reset`.
+- 18.6 Server endpoint `GET /api/live/state` for UI polling
+       (drones with patrol positions, event count, alive count).
+- 18.7 Server endpoint `POST /api/live/config` for sigma and
+       detection-mode tuning.
+- 18.8 Singleton instantiation at server startup with 5 drones in
+       default pentagon.
+- 18.9 Unit tests: pick-best-3 logic, 2-drone fallback, 1-drone
+       INSUFFICIENT_SENSORS, classifier swap.
+
+Frontend (`ui/index.html`):
+
+- 18.10 New tab `🎮 LIVE OPS` in the existing tab bar (Session 7's
+        tab framework).
+- 18.11 Sidebar swap: when LIVE OPS active, render drop-event buttons
+        instead of scenario list.
+- 18.12 Cursor-crosshair drop mode; map click → backend POST.
+- 18.13 ESC / right-click / same-button cancels drop mode.
+- 18.14 Poll `GET /api/live/state` at 2 Hz; lerp drone positions
+        client-side for smoothness.
+- 18.15 Render N drones (no hardcoded `drone_1/2/3`); reuse existing
+        drone entity rendering.
+- 18.16 On event POST response, build synthetic frame, feed to
+        phase machine, start animation.
+- 18.17 Previous fix fades out (~500 ms) when new event arrives.
+- 18.18 `DETECTION: perfect` badge + alive-count + event-count
+        readouts in sidebar.
+- 18.19 INSUFFICIENT_SENSORS banner when fix_kind == "none".
+- 18.20 Kill-drone integration: kill button works in LIVE OPS tab;
+        affects `LiveOpsState.drones[i].alive`.
+
+ML hookup (deferred to when classifier ships):
+
+- 18.21 (FUTURE) Implement `MLClassifier.__init__` to load model.
+- 18.22 (FUTURE) Implement `MLClassifier.classify()` with real
+        inference. Synthesize audio from truth_label or use
+        recorded clip.
+- 18.23 (FUTURE) Misclassification narrative: when predicted ≠ truth
+        AND confidence is low, ROE downgrades to RECON; recon drone
+        captures imagery; "reclassification" event upgrades back to
+        STRIKE. UI shows a badge: `RECLASSIFIED: drone → tank`.
+
+### Considerations
+
+- **💡 NOTE: Backend is the source of truth for drone positions
+  during Live Ops.** The UI just renders. Don't compute patrol
+  positions client-side — they'd drift out of sync with what the
+  backend uses for arrival-time computation.
+- **💡 NOTE: `localize_scenario()` doesn't change.** It already
+  takes a list of N event rows. The N-drone change happens
+  upstream in `select_drones_for_event()`.
+- **💡 NOTE: ML classifier is FUTURE-PROOF, not built.** v1 ships
+  `PerfectClassifier` only. The abstraction exists so the ML team
+  can drop in their model later without touching `live_ops.py`.
+- **💡 NOTE: audio fires at drop time, not per-drone arrival.**
+  Per user direction. Simpler. Visual cone radiation still uses
+  real arrival times.
+- **💡 NOTE: tab switching preserves backend state.** The
+  `LiveOpsState` singleton lives across tab switches. Reset is
+  explicit (button).
+- **💡 NOTE: pick-best-3 uses Euclidean distance in local
+  metres.** Project the event lat/lon to local plane around the
+  event, project each drone too, sort by distance. Existing
+  `projection.py` helpers do this.
+- **💡 NOTE: 2-drone fallback is automatic.** Don't add a "switch
+  to 2-drone mode" toggle. The system picks the math by alive
+  count. That's the demo: kill a drone, watch the math change
+  itself.
+- **⚠ Concurrency: out of scope for v1.** New event clears the
+  previous fix. If the user clicks two events in rapid succession,
+  only the second is rendered. v2 could add a queue.
+- **⚠ Patrol rate cap.** UI polls at 2 Hz, backend computes patrol
+  on each poll. If many concurrent UI clients connect, scale via
+  caching (one position snapshot per 500 ms). v1 is single-client
+  so this doesn't matter.
+
+### ⚠ HUMAN INPUT NEEDED
+
+1. **Default drone count.** Suggested 5 (loose pentagon). Confirm
+   or override (3 / 5 / 7).
+2. **Patrol radius / drift speed.** Suggested ~30 m amplitude
+   over ~20 s period (slow, atmospheric). Confirm.
+3. **Drop UX.** Suggested click-button-then-click-map. Alternative
+   is drag-drop (icon from sidebar onto map). Click-then-click is
+   simpler; drag-drop is sexier. Confirm.
+4. **Audio at drop vs at first-arrival.** Confirmed by user: at
+   drop. Locked in.
+5. **Default detection mode.** Suggested `perfect`. Confirm.
+6. **Should the source icon at drop position remain visible
+   indefinitely (as a "logged contact")?** Suggested: fade out
+   after the COMPLETE phase ends, ~10 s post-drop. Confirm.
+7. **Wildlife event label.** Suggested `"bird"` (uses Session 15's
+   green styling). Alternative: a generic `"wildlife"` label that
+   the policy maps to AMBIENT. Confirm.
+8. **N-drone upper limit.** Suggested 10 (sidebar pills get crowded
+   beyond that). Confirm.
+
+### Acceptance criteria
+
+- New tab `🎮 LIVE OPS` is selectable; sidebar swaps to drop-events
+  panel.
+- Default scene: 5 drones drift in a pentagon. UI updates positions
+  at ~2 Hz, animation smooth (no jitter).
+- Click `🔫 GUNSHOT`, click map → event drops, audio plays
+  immediately, source icon appears, cones radiate, 3 closest drones
+  light up at real wavefront-arrival times, cloud fades in, action
+  chip + banner appear, responder animation plays.
+- Click `🦌 WILDLIFE` → all visuals green, MONITOR action, no
+  responder dispatch.
+- Kill 1 drone → next event still triangulates with the closest 3
+  of the remaining 4 (uses ellipse fix).
+- Kill 2 drones (down to 3 alive) → still uses 3-drone math.
+- Kill 3 drones (down to 2 alive) → next event renders a hyperbola
+  + wedge (Session 11), action chip SEARCH (Session 9).
+- Kill 4 drones (down to 1) → next event shows
+  INSUFFICIENT_SENSORS banner; no fix drawn.
+- RESET ALL → all drones revived, events cleared.
+- Switching tabs and back → state preserved.
+- `DETECTION: perfect` badge always visible.
+- `PerfectClassifier` returns the dropped label with confidence
+  0.95; UI's classifier-mode hook is wired and ready for ML swap.
+
+---
+
 ## Out of scope (for the avoidance of doubt)
 
 These come up naturally in discussion but are deliberately excluded
 from these sessions:
 
-- **ML-based audio classifier.** The hardcoded frequency filters
-  already work for the demo. Replacing them is high-effort,
-  low-visible-payoff. List as "future work".
+- **ML-based audio classifier ON THE CRITICAL PATH.** Session 18
+  ships the abstraction (`Classifier` protocol) so the ML team can
+  drop in `MLClassifier` later, but v1 always uses `PerfectClassifier`.
+  No demo timeline depends on ML existing.
 - **Moving / tracked target reconstruction.** Bursts from the same
   location compound nicely, but a Kalman tracker is a multi-day
   build. Skip.

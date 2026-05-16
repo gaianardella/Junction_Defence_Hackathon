@@ -35,7 +35,8 @@ import numpy as np
 
 from .core import (C, ellipse_axes, ellipse_xy, localize, mc_confidence)
 from .jam import apply_jamming
-from .policy import decide as _policy_decide, priority as _policy_priority
+from .policy import (decide as _policy_decide, priority as _policy_priority,
+                      search_points as _search_points)
 from .projection import (latlon_to_local, latlon_to_local_array,
                          local_to_latlon, local_to_latlon_array)
 
@@ -137,6 +138,8 @@ def localize_scenario(group: list[dict], *,
                        cloud_format: str = "ellipse",
                        jammed_drone_ids: set[str] | None = None,
                        scenario_variant: str | None = None,
+                       sigma_t_override_ms: float | None = None,
+                       sigma_pos_override_m: float | None = None,
                        rng: np.random.Generator | None = None) -> dict:
     """Run the full pipeline on one scenario group; return an output dict."""
     rng = rng if rng is not None else np.random.default_rng(7)
@@ -157,6 +160,11 @@ def localize_scenario(group: list[dict], *,
 
     # 4. Monte-Carlo cloud with per-drone σ
     sigma_t_s, sigma_p_m = _per_drone_sigmas(group)
+    # Apply global overrides when supplied (replace, not add)
+    if sigma_t_override_ms is not None:
+        sigma_t_s = np.full_like(sigma_t_s, float(sigma_t_override_ms) / 1000.0)
+    if sigma_pos_override_m is not None:
+        sigma_p_m = np.full_like(sigma_p_m, float(sigma_pos_override_m))
     mc = mc_confidence(group, drone_positions,
                        clock_sigma_s=sigma_t_s,
                        pos_sigma_m=sigma_p_m,
@@ -200,6 +208,18 @@ def localize_scenario(group: list[dict], *,
         severity=decision.severity,
     )
 
+    # ── Session 9: SEARCH pattern ────────────────────────────────────────
+    # When the policy emits SEARCH, compute 3 sweep waypoints along the
+    # major axis of the uncertainty ellipse and include them in the output.
+    search_pattern_xy: list[list[float]] | None = None
+    search_pattern_ll: list[dict] | None = None
+    if decision.action == "SEARCH":
+        pts = _search_points(estimate_xy, mc["cov"], n=3)
+        search_pattern_xy = [[float(p[0]), float(p[1])] for p in pts]
+        pts_ll = local_to_latlon_array(pts, lat0, lon0)
+        search_pattern_ll = [{"lat": float(p[0]), "lon": float(p[1])}
+                              for p in pts_ll]
+
     return {
         "scenario": Path(group[0].get("path", "")).name,
         "label": label,
@@ -238,6 +258,8 @@ def localize_scenario(group: list[dict], *,
             "position_m_max": float(np.max(sigma_p_m)),
             "time_s_per_drone": [float(x) for x in sigma_t_s],
             "position_m_per_drone": [float(x) for x in sigma_p_m],
+            "sigma_t_override_ms": sigma_t_override_ms,
+            "sigma_pos_override_m": sigma_pos_override_m,
         },
         # ROE policy fields (Session 1)
         "recommended_action": decision.action,
@@ -252,6 +274,10 @@ def localize_scenario(group: list[dict], *,
             {e["drone_id"]: e.get("jam_status", "clean") for e in group}
             if jammed_drone_ids is not None else None
         ),
+        # Session 9: fix kind + SEARCH sweep pattern
+        "fix_kind": "point",       # "bearing" added in Session 11
+        "search_pattern_xy_local": search_pattern_xy,
+        "search_pattern_latlon":   search_pattern_ll,
     }
 
 
