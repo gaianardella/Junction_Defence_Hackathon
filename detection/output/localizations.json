@@ -644,16 +644,47 @@
         8.8,
         16.3,
         17.6
-      ]
+      ],
+      "sigma_t_override_ms": null,
+      "sigma_pos_override_m": null
     },
-    "recommended_action": "STRIKE",
-    "recommended_action_reason": "label 'gunshot' is unconditionally strike-authorised (CEP50 88.6m, GDOP 6.01)",
+    "recommended_action": "SEARCH",
+    "recommended_action_reason": "CEP50 88.6m exceeds search floor 50.0m \u2014 fix too imprecise for point engagement; sweeping sector",
     "recommended_action_severity": "medium",
-    "weapons_release_required": true,
+    "weapons_release_required": false,
     "source_mgrs": null,
-    "threat_priority": 46.413,
-    "scenario_variant": "clean",
+    "threat_priority": 31.413,
+    "scenario_variant": null,
     "jam_status_per_drone": null,
+    "fix_kind": "point",
+    "search_pattern_xy_local": [
+      [
+        -85.12942010284632,
+        -72.987950873784
+      ],
+      [
+        -418.49223388086943,
+        -121.20033978514093
+      ],
+      [
+        -751.8550476588925,
+        -169.41272869649785
+      ]
+    ],
+    "search_pattern_latlon": [
+      {
+        "lat": 62.411802603588065,
+        "lon": 25.75301683268922
+      },
+      {
+        "lat": 62.41136901915786,
+        "lon": 25.746543107087632
+      },
+      {
+        "lat": 62.41093543472765,
+        "lon": 25.740069381486045
+      }
+    ],
     "priority_rank": 5
   },
   {
@@ -1301,7 +1332,9 @@
         10.4,
         15.1,
         18.0
-      ]
+      ],
+      "sigma_t_override_ms": null,
+      "sigma_pos_override_m": null
     },
     "recommended_action": "RECON",
     "recommended_action_reason": "CEP50 15.1m exceeds limit 10.0m",
@@ -1309,8 +1342,11 @@
     "weapons_release_required": false,
     "source_mgrs": null,
     "threat_priority": 108.458,
-    "scenario_variant": "clean",
+    "scenario_variant": null,
     "jam_status_per_drone": null,
+    "fix_kind": "point",
+    "search_pattern_xy_local": null,
+    "search_pattern_latlon": null,
     "priority_rank": 0
   },
   {
@@ -1958,7 +1994,9 @@
         9.1,
         13.8,
         15.1
-      ]
+      ],
+      "sigma_t_override_ms": null,
+      "sigma_pos_override_m": null
     },
     "recommended_action": "STRIKE",
     "recommended_action_reason": "label 'gunshot' is unconditionally strike-authorised (CEP50 15.7m, GDOP 1.85)",
@@ -1966,8 +2004,11 @@
     "weapons_release_required": true,
     "source_mgrs": null,
     "threat_priority": 68.294,
-    "scenario_variant": "clean",
+    "scenario_variant": null,
     "jam_status_per_drone": null,
+    "fix_kind": "point",
+    "search_pattern_xy_local": null,
+    "search_pattern_latlon": null,
     "priority_rank": 4
   },
   {
@@ -2615,7 +2656,9 @@
         11.4,
         16.1,
         17.4
-      ]
+      ],
+      "sigma_t_override_ms": null,
+      "sigma_pos_override_m": null
     },
     "recommended_action": "HOLD",
     "recommended_action_reason": "localisation_confidence 0.092 below floor 0.1",
@@ -2623,8 +2666,11 @@
     "weapons_release_required": false,
     "source_mgrs": null,
     "threat_priority": -20.884,
-    "scenario_variant": "clean",
+    "scenario_variant": null,
     "jam_status_per_drone": null,
+    "fix_kind": "point",
+    "search_pattern_xy_local": null,
+    "search_pattern_latlon": null,
     "priority_rank": 6
   },
   {
@@ -3272,7 +3318,9 @@
         14.6,
         11.4,
         16.7
-      ]
+      ],
+      "sigma_t_override_ms": null,
+      "sigma_pos_override_m": null
     },
     "recommended_action": "RECON",
     "recommended_action_reason": "CEP50 15.7m exceeds limit 10.0m",
@@ -3280,8 +3328,11 @@
     "weapons_release_required": false,
     "source_mgrs": null,
     "threat_priority": 108.28,
-    "scenario_variant": "clean",
+    "scenario_variant": null,
     "jam_status_per_drone": null,
+    "fix_kind": "point",
+    "search_pattern_xy_local": null,
+    "search_pattern_latlon": null,
     "priority_rank": 1
   },
   {
@@ -3929,7 +3980,9 @@
         13.2,
         9.9,
         15.2
-      ]
+      ],
+      "sigma_t_override_ms": null,
+      "sigma_pos_override_m": null
     },
     "recommended_action": "RECON",
     "recommended_action_reason": "CEP50 21.2m exceeds limit 10.0m",
@@ -3937,8 +3990,11 @@
     "weapons_release_required": false,
     "source_mgrs": null,
     "threat_priority": 106.636,
-    "scenario_variant": "clean",
+    "scenario_variant": null,
     "jam_status_per_drone": null,
+    "fix_kind": "point",
+    "search_pattern_xy_local": null,
+    "search_pattern_latlon": null,
     "priority_rank": 3
   },
   {
@@ -4586,7 +4642,9 @@
         15.8,
         17.8,
         10.0
-      ]
+      ],
+      "sigma_t_override_ms": null,
+      "sigma_pos_override_m": null
     },
     "recommended_action": "RECON",
     "recommended_action_reason": "CEP50 16.1m exceeds limit 10.0m",
@@ -4594,8 +4652,11 @@
     "weapons_release_required": false,
     "source_mgrs": null,
     "threat_priority": 108.164,
-    "scenario_variant": "clean",
+    "scenario_variant": null,
     "jam_status_per_drone": null,
+    "fix_kind": "point",
+    "search_pattern_xy_local": null,
+    "search_pattern_latlon": null,
     "priority_rank": 2
   },
   {
@@ -5243,7 +5304,9 @@
         11.2,
         12.1,
         17.3
-      ]
+      ],
+      "sigma_t_override_ms": null,
+      "sigma_pos_override_m": null
     },
     "recommended_action": "HOLD",
     "recommended_action_reason": "localisation_confidence 0.005 below floor 0.1",
@@ -5251,8 +5314,11 @@
     "weapons_release_required": false,
     "source_mgrs": null,
     "threat_priority": -1510.191,
-    "scenario_variant": "clean",
+    "scenario_variant": null,
     "jam_status_per_drone": null,
+    "fix_kind": "point",
+    "search_pattern_xy_local": null,
+    "search_pattern_latlon": null,
     "priority_rank": 7
   }
 ]

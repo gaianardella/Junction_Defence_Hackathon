@@ -13,6 +13,9 @@ Public entry points:
         --out detection/output/localizations.json
 
     python -m triangulation.viewer detection/output/localizations.json
+
+    python -m triangulation.server
+        # UI + live API on http://127.0.0.1:5050/
 """
 
-__all__ = ["locate", "policy", "viewer"]
+__all__ = ["locate", "policy", "viewer", "server", "sandbox"]

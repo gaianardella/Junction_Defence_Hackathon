@@ -3,6 +3,7 @@
 from .io import relative_times
 from .solver import localize, localize_fast, C
 from .uncertainty import mc_confidence, ellipse_xy, ellipse_axes
+from . import solver_2drone
 
 __all__ = [
     "C",
@@ -12,4 +13,5 @@ __all__ = [
     "mc_confidence",
     "ellipse_xy",
     "ellipse_axes",
+    "solver_2drone",
 ]

@@ -30,13 +30,14 @@ timestamps and drone positions.
 | Path | Role |
 |---|---|
 | `triangulation/__init__.py` | package marker; exports `locate`, `policy`, `viewer` names |
-| `triangulation/locate.py` | CLI + pipeline orchestration; grouping, filtering, projection, MC, JSON write |
-| `triangulation/policy.py` | Pure ROE engine: `decide()` → `Decision`, `priority()` → float. No I/O. `ALWAYS_STRIKE_LABELS` bypasses CEP50/GDOP envelope for unconditionally strike-eligible labels (currently `"gunshot"`). |
+| `triangulation/locate.py` | CLI + pipeline orchestration; grouping, filtering, projection, MC, JSON write. Session 11: `_bearing_localizable()` + `localize_2drone_scenario()` for 2-drone hyperbola path. |
+| `triangulation/policy.py` | Pure ROE engine: `decide()` → `Decision`, `priority()` → float, `bearing_decide(label)` → `Decision` (always RECON, for 2-drone bearing fixes). No I/O. `ALWAYS_STRIKE_LABELS` bypasses CEP50/GDOP envelope for unconditionally strike-eligible labels (currently `"gunshot"`). |
 | `triangulation/jam.py` | GPS-jamming simulator: `apply_jamming(events, target_drone_id, *, pos_mult, time_mult, jam_label)` — scales error fields for one drone, adds `jam_status` per row. |
 | `triangulation/projection.py` | equirectangular lat/lon ↔ local-plane (metres). Valid <~2 km |
 | `triangulation/viewer.py` | Dash + Plotly OpenStreetMap viewer; scenario dropdown, no recomputation |
 | `triangulation/core/io.py` | `relative_times(events, ts_field)` — ns-safe time conversion |
 | `triangulation/core/solver.py` | `localize`, `localize_fast`; speed-of-sound `C = 343.0` |
+| `triangulation/core/solver_2drone.py` | Session 11: `hyperbola(p1,p2,dd,n_pts)` → arc; `mc_wedge(events,pos,σ_t,σ_pos,n)` → (arcs, hull); `dd_from_events(events)` → Δd |
 | `triangulation/core/uncertainty.py` | `mc_confidence` (per-drone σ), `ellipse_xy`, `ellipse_axes` |
 
 ## Input contract (`events.json`)
@@ -61,9 +62,13 @@ Other fields in `events.json` (e.g. `confidence`, `window_counts`,
 A group is skipped, with a one-line message, when any of:
 
 - any row has `relevant != true`
-- fewer than 3 distinct `drone_id`s
-- any row missing `event_time_ns` or `position`
+- fewer than 2 distinct relevant `drone_id`s
+- any relevant row missing `event_time_ns` or `position`
 - the solver raises (caught, logged as `error: <msg>`)
+
+Groups with exactly 2 relevant drones are **not skipped** — they are routed to
+`localize_2drone_scenario()` and produce a `fix_kind="bearing"` output entry.
+Groups with 3+ relevant drones take the normal point-fix path via `localize_scenario()`.
 
 ## Output contract (`localizations.json`)
 
@@ -100,6 +105,18 @@ Flat JSON list, one entry per localised group. Field reference:
 | `priority_rank` | int | 0-based rank across all localised scenarios in the file (0 = highest) |
 | `scenario_variant` | str \| null | `"clean"`, `"jammed-drone_2"`, etc. — set via `--variant-tag` CLI flag |
 | `jam_status_per_drone` | obj \| null | `{drone_id: "clean" \| "gps_jammed"}` — present only in jammed variants |
+| `fix_kind` | str | `"point"` (3+ drone full fix) \| `"bearing"` (2-drone hyperbola locus, Session 11) |
+| `hyperbola_latlon[]` | list[{lat,lon}] \| null | Deterministic TDOA hyperbola arc; present only when `fix_kind="bearing"` |
+| `hyperbola_xy_local[]` | list[[x,y]] \| null | Same arc in local-plane metres |
+| `wedge_latlon[]` | list[{lat,lon}] \| null | MC convex-hull uncertainty wedge polygon; present only when `fix_kind="bearing"` |
+| `wedge_xy_local[]` | list[[x,y]] \| null | Same wedge in local-plane metres |
+
+**Bearing-fix nulls.** When `fix_kind="bearing"` the following fields are `null` (no resolved point):
+`cep50_m`, `cep95_m_approx`, `zone_area_m2`, `gdop`, `localization_confidence`,
+`cloud_format`, `cloud_confidence`, `cloud_latlon`, `cloud_xy_local`,
+`search_pattern_xy_local`, `search_pattern_latlon`.
+`recommended_action` is always `"RECON"` for bearing fixes.
+`source.*` is set to the midpoint of the deterministic arc (convenience display coordinate only).
 
 ## Algorithm (per group)
 
@@ -132,6 +149,9 @@ Flat JSON list, one entry per localised group. Field reference:
 | `policy.py` | `HOLD_CONFIDENCE_FLOOR` | `0.10` |
 | `policy.py` | `ALWAYS_STRIKE_LABELS` | `("gunshot",)` — bypasses CEP/GDOP envelope; checked after HOLD floor |
 | `policy.py` | `STRIKE_ELIGIBLE_LABELS` | `("gunshot","missile_launch","tank")` |
+| `core/solver_2drone.py::hyperbola` | `n_pts` | `64` |
+| `core/solver_2drone.py::hyperbola` | `extent_factor` | `2.0` — arc half-width in multiples of inter-drone separation |
+| `core/solver_2drone.py::mc_wedge` | `n` | `200` (locate.py passes `mc_samples`) |
 
 ## Coordinate conventions
 

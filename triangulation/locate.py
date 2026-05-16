@@ -33,9 +33,12 @@ from typing import Iterable
 
 import numpy as np
 
-from .core import (C, ellipse_axes, ellipse_xy, localize, mc_confidence)
+from .core import (C, ellipse_axes, ellipse_xy, localize, mc_confidence,
+                    solver_2drone)
 from .jam import apply_jamming
-from .policy import decide as _policy_decide, priority as _policy_priority
+from .policy import (decide as _policy_decide, priority as _policy_priority,
+                      search_points as _search_points,
+                      bearing_decide as _bearing_decide)
 from .projection import (latlon_to_local, latlon_to_local_array,
                          local_to_latlon, local_to_latlon_array)
 
@@ -73,15 +76,30 @@ def _group_by_scenario(events: list[dict]) -> dict[str, list[dict]]:
 
 
 def _localizable(group: list[dict]) -> tuple[bool, str]:
-    """Decide whether a group has enough info for a TDOA fix."""
+    """Decide whether a group has enough info for a full TDOA point fix (3+ drones)."""
     if not group:
         return False, "empty group"
     if not all(bool(e.get("relevant")) for e in group):
         return False, "non-relevant rows present"
     drone_ids = {e["drone_id"] for e in group}
     if len(drone_ids) < 3:
-        return False, f"only {len(drone_ids)} distinct drone(s); need 3+"
+        return False, f"only {len(drone_ids)} distinct drone(s); need 3+ for point fix"
     if any("event_time_ns" not in e or "position" not in e for e in group):
+        return False, "missing event_time_ns or position field"
+    return True, "ok"
+
+
+def _bearing_localizable(group: list[dict]) -> tuple[bool, str]:
+    """Decide whether a group qualifies for a 2-drone bearing/hyperbola fix."""
+    if not group:
+        return False, "empty group"
+    relevant = [e for e in group if e.get("relevant")]
+    if not relevant:
+        return False, "no relevant rows"
+    drone_ids = {e["drone_id"] for e in relevant}
+    if len(drone_ids) != 2:
+        return False, f"{len(drone_ids)} relevant drone(s); need exactly 2"
+    if any("event_time_ns" not in e or "position" not in e for e in relevant):
         return False, "missing event_time_ns or position field"
     return True, "ok"
 
@@ -137,6 +155,8 @@ def localize_scenario(group: list[dict], *,
                        cloud_format: str = "ellipse",
                        jammed_drone_ids: set[str] | None = None,
                        scenario_variant: str | None = None,
+                       sigma_t_override_ms: float | None = None,
+                       sigma_pos_override_m: float | None = None,
                        rng: np.random.Generator | None = None) -> dict:
     """Run the full pipeline on one scenario group; return an output dict."""
     rng = rng if rng is not None else np.random.default_rng(7)
@@ -157,6 +177,11 @@ def localize_scenario(group: list[dict], *,
 
     # 4. Monte-Carlo cloud with per-drone σ
     sigma_t_s, sigma_p_m = _per_drone_sigmas(group)
+    # Apply global overrides when supplied (replace, not add)
+    if sigma_t_override_ms is not None:
+        sigma_t_s = np.full_like(sigma_t_s, float(sigma_t_override_ms) / 1000.0)
+    if sigma_pos_override_m is not None:
+        sigma_p_m = np.full_like(sigma_p_m, float(sigma_pos_override_m))
     mc = mc_confidence(group, drone_positions,
                        clock_sigma_s=sigma_t_s,
                        pos_sigma_m=sigma_p_m,
@@ -200,6 +225,18 @@ def localize_scenario(group: list[dict], *,
         severity=decision.severity,
     )
 
+    # ── Session 9: SEARCH pattern ────────────────────────────────────────
+    # When the policy emits SEARCH, compute 3 sweep waypoints along the
+    # major axis of the uncertainty ellipse and include them in the output.
+    search_pattern_xy: list[list[float]] | None = None
+    search_pattern_ll: list[dict] | None = None
+    if decision.action == "SEARCH":
+        pts = _search_points(estimate_xy, mc["cov"], n=3)
+        search_pattern_xy = [[float(p[0]), float(p[1])] for p in pts]
+        pts_ll = local_to_latlon_array(pts, lat0, lon0)
+        search_pattern_ll = [{"lat": float(p[0]), "lon": float(p[1])}
+                              for p in pts_ll]
+
     return {
         "scenario": Path(group[0].get("path", "")).name,
         "label": label,
@@ -238,6 +275,8 @@ def localize_scenario(group: list[dict], *,
             "position_m_max": float(np.max(sigma_p_m)),
             "time_s_per_drone": [float(x) for x in sigma_t_s],
             "position_m_per_drone": [float(x) for x in sigma_p_m],
+            "sigma_t_override_ms": sigma_t_override_ms,
+            "sigma_pos_override_m": sigma_pos_override_m,
         },
         # ROE policy fields (Session 1)
         "recommended_action": decision.action,
@@ -252,6 +291,179 @@ def localize_scenario(group: list[dict], *,
             {e["drone_id"]: e.get("jam_status", "clean") for e in group}
             if jammed_drone_ids is not None else None
         ),
+        # Session 9: fix kind + SEARCH sweep pattern
+        "fix_kind": "point",       # "bearing" added in Session 11
+        "search_pattern_xy_local": search_pattern_xy,
+        "search_pattern_latlon":   search_pattern_ll,
+    }
+
+
+# --------------------------------------------------------- 2-drone bearing fix
+def localize_2drone_scenario(group: list[dict], *,
+                              mc_samples: int = 400,
+                              confidence: float = 0.95,
+                              jammed_drone_ids: set[str] | None = None,
+                              scenario_variant: str | None = None,
+                              sigma_t_override_ms: float | None = None,
+                              sigma_pos_override_m: float | None = None,
+                              rng: np.random.Generator | None = None) -> dict:
+    """Run a bearing-only (hyperbola locus) fix for exactly 2 relevant drones.
+
+    Returns a dict with the same top-level keys as ``localize_scenario`` where
+    possible, plus:
+      - ``fix_kind``          = "bearing"
+      - ``hyperbola_latlon``  = list[{lat, lon}] deterministic arc
+      - ``hyperbola_xy_local``= list[[x, y]] same arc in local-plane metres
+      - ``wedge_latlon``      = list[{lat, lon}] MC uncertainty hull polygon
+      - ``wedge_xy_local``    = list[[x, y]] hull in local-plane metres
+
+    Fields that require a point fix (``source``, ``cep50_m``, ``gdop``,
+    ``zone_area_m2``, ``cloud_*``) are set to ``null``.
+    """
+    rng = rng if rng is not None else np.random.default_rng(7)
+
+    # Use only relevant rows
+    relevant = [e for e in group if e.get("relevant")]
+    # Sort by drone_id for determinism
+    relevant = sorted(relevant, key=lambda e: e["drone_id"])
+
+    lats = np.array([e["position"]["lat"] for e in relevant])
+    lons = np.array([e["position"]["lon"] for e in relevant])
+    lat0, lon0 = float(lats.mean()), float(lons.mean())
+
+    xy = latlon_to_local_array(lats, lons, lat0, lon0)
+    p1, p2 = xy[0], xy[1]
+
+    # Deterministic range difference
+    dd = solver_2drone.dd_from_events(relevant)
+
+    # Deterministic hyperbola arc
+    arc_xy = solver_2drone.hyperbola(p1, p2, dd, n_pts=64)
+
+    if arc_xy is not None:
+        arc_ll = local_to_latlon_array(arc_xy, lat0, lon0)
+        hyperbola_latlon = [{"lat": float(p[0]), "lon": float(p[1])}
+                            for p in arc_ll]
+        hyperbola_xy_local = [[float(p[0]), float(p[1])] for p in arc_xy]
+    else:
+        hyperbola_latlon = []
+        hyperbola_xy_local = []
+
+    # Per-drone sigmas
+    sigma_t_s, sigma_p_m = _per_drone_sigmas(relevant)
+    if sigma_t_override_ms is not None:
+        sigma_t_s = np.full_like(sigma_t_s, float(sigma_t_override_ms) / 1000.0)
+    if sigma_pos_override_m is not None:
+        sigma_p_m = np.full_like(sigma_p_m, float(sigma_pos_override_m))
+
+    # MC wedge
+    drone_pos_array = np.array([p1, p2])
+    _, hull_xy = solver_2drone.mc_wedge(
+        relevant, drone_pos_array,
+        clock_sigma_s=sigma_t_s,
+        pos_sigma_m=sigma_p_m,
+        n=mc_samples, n_pts=64, rng=rng,
+    )
+    if hull_xy.shape[0] > 0:
+        hull_ll = local_to_latlon_array(hull_xy, lat0, lon0)
+        wedge_latlon = [{"lat": float(p[0]), "lon": float(p[1])} for p in hull_ll]
+        wedge_xy_local = [[float(p[0]), float(p[1])] for p in hull_xy]
+    else:
+        wedge_latlon = []
+        wedge_xy_local = []
+
+    # Bearing from first drone to midpoint of the arc (if available)
+    ids_sorted = sorted({e["drone_id"] for e in relevant})
+    ref_id = ids_sorted[0]
+    ref_xy = np.asarray(p1)
+    arc_mid_xy = np.mean(arc_xy, axis=0) if arc_xy is not None else ref_xy
+    bearing, distance = _bearing_deg(arc_mid_xy, ref_xy)
+
+    label = relevant[0].get("label")
+
+    # Policy: bearing-only fix always gets RECON regardless of label.
+    # We cannot authorise a strike without a resolved point estimate.
+    decision = _bearing_decide(label)
+
+    priority_score = _policy_priority(
+        label=label,
+        recommended_action=decision.action,
+        cep50_m=None,          # undefined for bearing fix
+        severity=decision.severity,
+    )
+
+    # Representative lat/lon from arc midpoint (for map display / MGRS hint)
+    if arc_xy is not None:
+        mid_lat, mid_lon = local_to_latlon(
+            float(arc_mid_xy[0]), float(arc_mid_xy[1]), lat0, lon0
+        )
+    else:
+        mid_lat, mid_lon = lat0, lon0
+
+    return {
+        "scenario": Path(relevant[0].get("path", "")).name,
+        "label": label,
+        "label_human": relevant[0].get("label_human"),
+        "event_timestamp_ns": int(relevant[0].get("timestamp_ns", 0)),
+        "drone_ids": ids_sorted,
+        "drones_used": [
+            {"drone_id": e["drone_id"],
+             "lat": float(e["position"]["lat"]),
+             "lon": float(e["position"]["lon"]),
+             "event_time_ns": int(e["event_time_ns"]),
+             "sigma_t_ms": float(e.get(TIME_ERROR_FIELD_MS, 0.0)),
+             "sigma_pos_m": float(e.get(POSITION_ERROR_FIELD, 0.0))}
+            for e in relevant
+        ],
+        # No resolved point source — set to approximate arc midpoint for
+        # downstream display; consumers should check fix_kind == "bearing".
+        "source": {
+            "lat": mid_lat, "lon": mid_lon,
+            "x_m_local": float(arc_mid_xy[0]),
+            "y_m_local": float(arc_mid_xy[1]),
+            "origin_lat": lat0, "origin_lon": lon0,
+        },
+        # Point-fix quality metrics are undefined for a bearing fix
+        "cep50_m": None,
+        "cep95_m_approx": None,
+        "zone_area_m2": None,
+        "gdop": None,
+        "localization_confidence": None,
+        "bearing_from_first_drone_deg": round(bearing, 2),
+        "distance_from_first_drone_m": round(distance, 2),
+        # Cloud fields: not applicable for bearing fix
+        "cloud_format": None,
+        "cloud_confidence": None,
+        "cloud_latlon": None,
+        "cloud_xy_local": None,
+        "input_errors": {
+            "time_ms_max": float(np.max(sigma_t_s) * 1000.0),
+            "position_m_max": float(np.max(sigma_p_m)),
+            "time_s_per_drone": [float(x) for x in sigma_t_s],
+            "position_m_per_drone": [float(x) for x in sigma_p_m],
+            "sigma_t_override_ms": sigma_t_override_ms,
+            "sigma_pos_override_m": sigma_pos_override_m,
+        },
+        "recommended_action": decision.action,
+        "recommended_action_reason": decision.reason,
+        "recommended_action_severity": decision.severity,
+        "weapons_release_required": decision.weapons_release_required,
+        "source_mgrs": _mgrs_or_none(mid_lat, mid_lon),
+        "threat_priority": round(priority_score, 3),
+        "scenario_variant": scenario_variant,
+        "jam_status_per_drone": (
+            {e["drone_id"]: e.get("jam_status", "clean") for e in relevant}
+            if jammed_drone_ids is not None else None
+        ),
+        # Session 11: fix kind + bearing-specific locus fields
+        "fix_kind": "bearing",
+        "hyperbola_latlon": hyperbola_latlon,
+        "hyperbola_xy_local": hyperbola_xy_local,
+        "wedge_latlon": wedge_latlon,
+        "wedge_xy_local": wedge_xy_local,
+        # Not applicable for bearing fix
+        "search_pattern_xy_local": None,
+        "search_pattern_latlon": None,
     }
 
 
@@ -291,28 +503,51 @@ def run(events_path: Path, out_path: Path, *,
 
     for scenario, group in groups.items():
         ok, reason = _localizable(group)
-        if not ok:
-            skipped.append((scenario, reason))
-            continue
-        try:
-            entry = localize_scenario(
-                group, mc_samples=mc_samples,
-                confidence=confidence,
-                cloud_format=cloud_format,
-                jammed_drone_ids=jammed_drone_ids,
-                scenario_variant=variant_tag,
-                rng=rng,
-            )
-        except Exception as exc:  # pragma: no cover (defensive)
-            skipped.append((scenario, f"error: {exc}"))
-            continue
-        out.append(entry)
-        if verbose:
-            print(f"  ✓ {entry['scenario']:40s} "
-                  f"({entry['label']:<14s}) "
-                  f"CEP50={entry['cep50_m']:6.2f}m "
-                  f"zone={entry['zone_area_m2']:7.1f}m² "
-                  f"gdop={entry['gdop']:5.2f}")
+        if ok:
+            # ── 3+ drone point fix ─────────────────────────────────────────
+            try:
+                entry = localize_scenario(
+                    group, mc_samples=mc_samples,
+                    confidence=confidence,
+                    cloud_format=cloud_format,
+                    jammed_drone_ids=jammed_drone_ids,
+                    scenario_variant=variant_tag,
+                    rng=rng,
+                )
+            except Exception as exc:  # pragma: no cover (defensive)
+                skipped.append((scenario, f"error: {exc}"))
+                continue
+            out.append(entry)
+            if verbose:
+                print(f"  ✓ {entry['scenario']:40s} "
+                      f"({entry['label'] or '':14s}) "
+                      f"CEP50={entry['cep50_m']:6.2f}m "
+                      f"zone={entry['zone_area_m2']:7.1f}m² "
+                      f"gdop={entry['gdop']:5.2f}")
+        else:
+            # ── check for 2-drone bearing fix ─────────────────────────────
+            b_ok, b_reason = _bearing_localizable(group)
+            if not b_ok:
+                skipped.append((scenario, reason))  # original reason
+                continue
+            try:
+                entry = localize_2drone_scenario(
+                    group, mc_samples=mc_samples,
+                    confidence=confidence,
+                    jammed_drone_ids=jammed_drone_ids,
+                    scenario_variant=variant_tag,
+                    rng=rng,
+                )
+            except Exception as exc:  # pragma: no cover (defensive)
+                skipped.append((scenario, f"error (bearing): {exc}"))
+                continue
+            out.append(entry)
+            if verbose:
+                n_hyp = len(entry.get("hyperbola_latlon") or [])
+                print(f"  ~ {entry['scenario']:40s} "
+                      f"({entry['label'] or '':14s}) "
+                      f"bearing-fix  arc={n_hyp}pts  "
+                      f"action={entry['recommended_action']}")
 
     # Stamp priority_rank (0 = highest priority) across the whole list.
     ranked = sorted(enumerate(out), key=lambda x: x[1]["threat_priority"], reverse=True)
