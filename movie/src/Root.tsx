@@ -28,8 +28,8 @@ export const Root: React.FC = () => {
         component={Scene3}
         durationInFrames={spectrogramManifest.totalFrames}
         fps={spectrogramManifest.fps}
-        width={1280}
-        height={720}
+        width={1920}
+        height={1080}
       />
     </>
   );

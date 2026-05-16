@@ -506,17 +506,29 @@ export const Scene3: React.FC = () => {
   const scenarios = manifest.scenarios as unknown as Scenario[];
   return (
     <AbsoluteFill style={{ background: "black" }}>
-      <TacticalGrid />
-      {scenarios.map((s, i) => (
-        <Sequence key={s.id} from={s.startFrame} durationInFrames={s.frames}>
-          <ScenarioBlock
-            scenario={s}
-            scenarioIndex={i}
-            totalScenarios={scenarios.length}
-          />
-        </Sequence>
-      ))}
-      <FrameCounter frame={frame} />
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: FRAME_WIDTH,
+          height: FRAME_HEIGHT,
+          transform: "scale(1.5)",
+          transformOrigin: "top left",
+        }}
+      >
+        <TacticalGrid />
+        {scenarios.map((s, i) => (
+          <Sequence key={s.id} from={s.startFrame} durationInFrames={s.frames}>
+            <ScenarioBlock
+              scenario={s}
+              scenarioIndex={i}
+              totalScenarios={scenarios.length}
+            />
+          </Sequence>
+        ))}
+        <FrameCounter frame={frame} />
+      </div>
     </AbsoluteFill>
   );
 };

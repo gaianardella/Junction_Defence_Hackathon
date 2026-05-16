@@ -23,7 +23,7 @@
         "label": "tank",
         "labelHuman": "Tank engine",
         "relevant": true,
-        "peakConfidence": 0.626,
+        "peakConfidence": 0.78,
         "shareConfidence": 0.935,
         "windowCounts": {
           "tank": 43,

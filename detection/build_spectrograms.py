@@ -71,6 +71,11 @@ SCENARIOS = [
     {"id": "missile", "title": "MISSILE LAUNCH under DRONE BUZZ", "start_sec": 11.0},
 ]
 
+# For these scenarios, regenerate the "after" track by running the live REPET-enhanced
+# denoise on the raw mix instead of using the disk-cached _preprocessed.wav (which was
+# produced by a weaker pipeline and stays close to the mix).
+RE_DENOISE = {"gunshot"}
+
 
 def best_window_time(
     audio: np.ndarray, sr: int, target_label: str, apply_wind_hp: bool,
@@ -135,6 +140,8 @@ def trim_audio(audio: np.ndarray, sr: int, start_sec: float, length_sec: float) 
     return clip
 
 
+
+
 def main() -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     manifest = {
@@ -183,7 +190,11 @@ def main() -> None:
 
         # Trim both audios to the same window.
         trimmed_mix = trim_audio(full_mix, sr, start_sec, AUDIO_LEN_SEC)
-        trimmed_pre = trim_audio(full_pre, sr, start_sec, AUDIO_LEN_SEC)
+        if sid in RE_DENOISE:
+            re_pre, _ = prepare_audio_for_detection(full_mix, sr, denoise=True)
+            trimmed_pre = trim_audio(re_pre, sr, start_sec, AUDIO_LEN_SEC)
+        else:
+            trimmed_pre = trim_audio(full_pre, sr, start_sec, AUDIO_LEN_SEC)
 
         raw_wav = OUT_DIR / f"{sid}_raw.wav"
         pre_wav = OUT_DIR / f"{sid}_pre.wav"
