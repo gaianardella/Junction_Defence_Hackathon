@@ -1143,6 +1143,11 @@ def main():
         action="store_true",
         help="UAV front-end: notch + adaptive spectral subtraction + REPET (needs data/samples/drone/)",
     )
+    p.add_argument(
+        "--mesh-publish",
+        action="store_true",
+        help="after writing JSON, publish only relevant rows on tactical mesh (32 B payloads)",
+    )
     args = p.parse_args()
     denoise = args.denoise
 
@@ -1197,6 +1202,10 @@ def main():
     if out_path is not None:
         written = write_results_json(results, out_path)
         print(f"JSON written: {written}", file=sys.stderr)
+        if args.mesh_publish:
+            from mesh.publish import publish_events_file
+            print("Mesh publish (relevant rows only):", file=sys.stderr)
+            publish_events_file(written, verbose=True)
 
     if args.json:
         print(payload)

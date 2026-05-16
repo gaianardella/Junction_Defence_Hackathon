@@ -1,0 +1,11 @@
+{
+  "nodes": ["drone_1", "drone_2", "drone_3", "operator"],
+  "links": [
+    {"a": "drone_1", "b": "drone_2", "loss": 0.05},
+    {"a": "drone_2", "b": "drone_3", "loss": 0.05},
+    {"a": "drone_1", "b": "drone_3", "loss": 0.08},
+    {"a": "drone_1", "b": "operator", "loss": 0.02},
+    {"a": "drone_2", "b": "operator", "loss": 0.02},
+    {"a": "drone_3", "b": "operator", "loss": 0.02}
+  ]
+}

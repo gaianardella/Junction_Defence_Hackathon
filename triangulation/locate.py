@@ -262,6 +262,7 @@ def run(events_path: Path, out_path: Path, *,
         cloud_format: str = "ellipse",
         pretty: bool = False,
         verbose: bool = True,
+        mesh_publish: bool = False,
         jam_drone: str | None = None,
         jam_position_mult: float = 5.0,
         jam_time_mult: float = 1.0,
@@ -328,6 +329,13 @@ def run(events_path: Path, out_path: Path, *,
             print(f"  Skipped {len(skipped)} scenarios:")
             for s, r in skipped:
                 print(f"    · {s}: {r}")
+
+    if mesh_publish and out:
+        from mesh.publish import publish_localizations_file
+        if verbose:
+            print("\n  Mesh publish (24 B summaries, not full clouds):")
+        publish_localizations_file(out_path, verbose=verbose)
+
     return out
 
 
@@ -360,6 +368,11 @@ def _cli(argv: Iterable[str] | None = None) -> int:
                    help="jam_status string written for the affected drone (default 'gps_jammed')")
     p.add_argument("--variant-tag", default=None,
                    help="tag written to scenario_variant in every output entry (e.g. 'clean')")
+    p.add_argument(
+        "--mesh-publish",
+        action="store_true",
+        help="after writing JSON, publish 24 B loc summaries on tactical mesh (not full clouds)",
+    )
     args = p.parse_args(argv)
 
     run(Path(args.inp), Path(args.out),
@@ -368,6 +381,7 @@ def _cli(argv: Iterable[str] | None = None) -> int:
         cloud_format=args.cloud_format,
         pretty=args.pretty,
         verbose=not args.quiet,
+        mesh_publish=args.mesh_publish,
         jam_drone=args.jam_drone,
         jam_position_mult=args.jam_position_mult,
         jam_time_mult=args.jam_time_mult,
