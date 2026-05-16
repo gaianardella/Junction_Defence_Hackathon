@@ -29,8 +29,9 @@ timestamps and drone positions.
 
 | Path | Role |
 |---|---|
-| `triangulation/__init__.py` | package marker; exports `locate`, `viewer` names |
+| `triangulation/__init__.py` | package marker; exports `locate`, `policy`, `viewer` names |
 | `triangulation/locate.py` | CLI + pipeline orchestration; grouping, filtering, projection, MC, JSON write |
+| `triangulation/policy.py` | Pure ROE engine: `decide()` → `Decision`, `priority()` → float. No I/O. |
 | `triangulation/projection.py` | equirectangular lat/lon ↔ local-plane (metres). Valid <~2 km |
 | `triangulation/viewer.py` | Dash + Plotly OpenStreetMap viewer; scenario dropdown, no recomputation |
 | `triangulation/core/io.py` | `relative_times(events, ts_field)` — ns-safe time conversion |
@@ -89,6 +90,13 @@ Flat JSON list, one entry per localised group. Field reference:
 | `cloud_latlon[]` | list[{lat, lon}] | closed polygon (last == first repeated) |
 | `cloud_xy_local[]` | list[[x, y]] | same polygon in local-plane metres |
 | `input_errors` | obj | `time_ms_max`, `position_m_max`, `time_s_per_drone[]`, `position_m_per_drone[]` |
+| `recommended_action` | str | `STRIKE` \| `RECON` \| `HOLD` — ROE decision from `policy.decide()` |
+| `recommended_action_reason` | str | human-readable justification for the action |
+| `recommended_action_severity` | str | `high` \| `medium` \| `low` — threat class severity |
+| `weapons_release_required` | bool | `true` only when action is `STRIKE` |
+| `source_mgrs` | str \| null | 10 m MGRS grid reference; `null` if `mgrs` package not installed |
+| `threat_priority` | float | numeric urgency score from `policy.priority()`; higher = more urgent |
+| `priority_rank` | int | 0-based rank across all localised scenarios in the file (0 = highest) |
 
 ## Algorithm (per group)
 

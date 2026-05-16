@@ -4,6 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tactical Edge — Live Map</title>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
   <style>
     @import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Rajdhani:wght@500;600;700&display=swap");
 
@@ -117,6 +122,7 @@
       border-bottom: 1px solid var(--border);
     }
 
+    /* ── Map container ──────────────────────────────────────── */
     .map-wrap {
       position: relative;
       grid-column: 2;
@@ -124,18 +130,51 @@
       border-radius: 4px;
       overflow: hidden;
       border: 1px solid var(--border);
-      box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.6);
     }
 
+    /* Leaflet map — bottom of the stack */
+    #leafletMap {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      background: #0a120c;   /* dark while tiles load */
+    }
+
+    /* Dark tactical tint on MML tiles — desaturate heavily so coloured icons pop */
+    #leafletMap .leaflet-tile-pane {
+      filter: brightness(0.38) contrast(0.88) saturate(0.22) hue-rotate(5deg);
+    }
+
+    /* Hide Leaflet attribution (credited in footer instead) */
+    #leafletMap .leaflet-control-attribution {
+      display: none;
+    }
+
+    /* Dark veil between map tiles and the canvas overlay.
+       Flattens the remaining map detail so icons read clearly. */
+    #mapVeil {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      background: rgba(4, 10, 6, 0.30);
+      pointer-events: none;
+    }
+
+    /* Canvas — transparent overlay: sonar pulses + confidence cloud */
     #mapCanvas {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
       display: block;
       width: 100%;
       height: 100%;
+      pointer-events: none;
     }
 
     .map-overlay {
       position: absolute;
       inset: 0;
+      z-index: 3;
       pointer-events: none;
     }
 
@@ -182,8 +221,24 @@
       transition: none;
     }
 
+    /* Base shadow for all icons — strong black halo punches through any map bg */
     .entity svg {
-      filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.7));
+      filter: drop-shadow(0 0 3px rgba(0,0,0,1))
+              drop-shadow(0 2px 8px rgba(0,0,0,0.95));
+    }
+
+    /* Drone — bright green glow so friendly UAVs are immediately legible */
+    .entity.drone svg {
+      filter: drop-shadow(0 0 7px rgba(79, 216, 122, 0.9))
+              drop-shadow(0 0 3px rgba(0,0,0,1))
+              drop-shadow(0 2px 8px rgba(0,0,0,0.95));
+    }
+
+    /* Hostile — strong red glow; won't blend into brown contours any more */
+    .entity.hostile svg {
+      filter: drop-shadow(0 0 8px rgba(232, 92, 74, 1.0))
+              drop-shadow(0 0 3px rgba(0,0,0,1))
+              drop-shadow(0 2px 8px rgba(0,0,0,0.95));
     }
 
     .entity.drone .label {
@@ -195,6 +250,7 @@
       font-size: 0.6rem;
       color: var(--accent);
       white-space: nowrap;
+      text-shadow: 0 0 6px rgba(0,0,0,1), 0 1px 3px rgba(0,0,0,1);
     }
 
     .entity.hostile .label {
@@ -206,7 +262,113 @@
       font-size: 0.55rem;
       color: var(--hostile);
       white-space: nowrap;
+      text-shadow: 0 0 6px rgba(0,0,0,1), 0 1px 3px rgba(0,0,0,1);
     }
+
+    /* ── RECON: amber pulse on existing target ───────────────── */
+    @keyframes recon-scan {
+      0%   { filter: drop-shadow(0 0 4px rgba(232,168,56,0.7))  drop-shadow(0 0 3px rgba(0,0,0,1)); }
+      50%  { filter: drop-shadow(0 0 14px rgba(232,168,56,1.0)) drop-shadow(0 0 3px rgba(0,0,0,1)); }
+      100% { filter: drop-shadow(0 0 4px rgba(232,168,56,0.7))  drop-shadow(0 0 3px rgba(0,0,0,1)); }
+    }
+    @keyframes false-alarm-pulse {
+      0%   { opacity: 0.7; }
+      50%  { opacity: 1.0; }
+      100% { opacity: 0.7; }
+    }
+
+    .entity.hostile.recon-scanning svg {
+      animation: recon-scan 1.4s ease-in-out infinite;
+    }
+    .entity.hostile.recon-scanning .label { color: var(--warn); }
+
+    .entity.hostile.false-alarm-marker svg {
+      animation: false-alarm-pulse 2s ease-in-out infinite;
+    }
+    .entity.hostile.false-alarm-marker .label { color: var(--warn); }
+
+    /* ── Scenario intro card ──────────────────────────────────── */
+    #scenarioIntro {
+      position: absolute;
+      top: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      background: rgba(10, 18, 12, 0.88);
+      border: 1px solid rgba(79,216,122,0.4);
+      border-radius: 6px;
+      padding: 14px 20px;
+      min-width: 320px;
+      max-width: 480px;
+      text-align: center;
+      pointer-events: none;
+      transition: opacity 0.5s ease;
+    }
+    #scenarioIntro.hidden { opacity: 0; pointer-events: none; }
+    #scenarioIntro .si-num {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      letter-spacing: 0.12em;
+      margin-bottom: 4px;
+    }
+    #scenarioIntro .si-title {
+      font-family: "Rajdhani", sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.08em;
+      margin-bottom: 4px;
+    }
+    #scenarioIntro .si-purpose {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.62rem;
+      color: var(--warn);
+      margin-bottom: 6px;
+      letter-spacing: 0.06em;
+    }
+    #scenarioIntro .si-desc {
+      font-family: "Rajdhani", sans-serif;
+      font-size: 0.82rem;
+      color: var(--text);
+      line-height: 1.4;
+    }
+
+    /* ── ROE banner ───────────────────────────────────────────── */
+    #roeBanner {
+      position: absolute;
+      bottom: 36px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      padding: 10px 24px;
+      border-radius: 4px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-align: center;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+    #roeBanner.visible { opacity: 1; }
+    #roeBanner.roe-hold   { background: rgba(232,92,74,0.18); border: 1px solid rgba(232,92,74,0.55); color: #e85c4a; }
+    #roeBanner.roe-recon  { background: rgba(232,168,56,0.18); border: 1px solid rgba(232,168,56,0.55); color: #e8a838; }
+    #roeBanner.roe-false  { background: rgba(100,140,100,0.18); border: 1px solid rgba(79,216,122,0.35); color: var(--accent); }
+
+    /* ── NEXT button ─────────────────────────────────────────── */
+    @keyframes next-pulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(79,216,122,0); }
+      50%     { box-shadow: 0 0 0 6px rgba(79,216,122,0.3); }
+    }
+    #btnNext {
+      display: none;
+      animation: next-pulse 1.6s ease-in-out infinite;
+      background: rgba(79,216,122,0.18);
+      border-color: var(--accent);
+    }
+    #btnNext.visible { display: inline-block; }
 
     .log {
       font-family: "JetBrains Mono", monospace;
@@ -218,9 +380,9 @@
     }
 
     .log .entry { margin-bottom: 4px; }
-    .log .entry.warn { color: var(--warn); }
+    .log .entry.warn    { color: var(--warn); }
     .log .entry.hostile { color: var(--hostile); }
-    .log .entry.ok { color: var(--accent); }
+    .log .entry.ok      { color: var(--accent); }
 
     .legend {
       display: flex;
@@ -287,7 +449,6 @@
     }
 
     select { cursor: pointer; }
-
     select:disabled { opacity: 0.45; }
 
     .timeline-readout {
@@ -350,6 +511,7 @@
       <div class="btn-row" style="margin-top: 8px">
         <button type="button" id="btnPause">PAUSE</button>
         <button type="button" id="btnRetry">RETRY</button>
+        <button type="button" id="btnNext">NEXT →</button>
       </div>
       <h2 style="margin-top: 14px">WebSocket</h2>
       <input type="text" id="wsUrl" value="ws://localhost:8765" placeholder="ws://host:port" />
@@ -361,11 +523,23 @@
     </aside>
 
     <div class="map-wrap">
+      <!-- Real topographic base map — MML Maastokartta + Rinnevarjostus hillshade -->
+      <div id="leafletMap"></div>
+      <!-- Dark veil — flattens map detail so coloured icons pop -->
+      <div id="mapVeil"></div>
+      <!-- Transparent canvas overlay: sonar pulses + confidence cloud -->
       <canvas id="mapCanvas"></canvas>
       <div class="map-overlay">
         <div class="entity-layer" id="entityLayer"></div>
         <div class="compass">N</div>
-        <div class="coords" id="coords">LAT 62.41°N · LON 25.75°E · ALT 42m</div>
+        <div class="coords" id="coords">LAT 62.383°N · LON 25.629°E</div>
+        <div id="scenarioIntro" class="hidden">
+          <div class="si-num" id="siNum">SCENARIO 1 / 5</div>
+          <div class="si-title" id="siTitle">—</div>
+          <div class="si-purpose" id="siPurpose">—</div>
+          <div class="si-desc" id="siDesc">—</div>
+        </div>
+        <div id="roeBanner"></div>
       </div>
     </div>
 
@@ -379,12 +553,36 @@
       <div>HOSTILE: <span id="statHostile">0</span></div>
       <div>SONAR PINGS: <span id="statPings">0</span></div>
       <div>FPS: <span id="statFps">—</span></div>
-      <div style="margin-left: auto">Kova Labs · Junction DefenceHack</div>
+      <div style="margin-left: auto">© Maanmittauslaitos · Kova Labs · Junction DefenceHack</div>
     </footer>
   </div>
 
   <script>
-    // ─── SVG icons (drone + hostile types) ───────────────────────────────
+    // ─── MML Topographic API ──────────────────────────────────────────────
+    // Open Map Image Service (WMTS) — Maanmittauslaitos
+    // Docs: https://www.maanmittauslaitos.fi/en/maps-and-spatial-data/
+    //       datasets-and-interfaces/map-interface-services/map-image-service-wms-wmts-1
+    const MML_KEY  = "40029d5d-4422-4b2f-b66e-89461257a074";
+    const MML_BASE = "https://avoin-karttakuva.maanmittauslaitos.fi/avoin/wmts/1.0.0";
+
+    // WMTS REST path: /{TileMatrix}/{TileRow}/{TileCol}
+    // In Leaflet's template that maps to:  {z} / {y}     / {x}
+    // We use WGS84_Pseudo-Mercator (EPSG:3857) — natively compatible with Leaflet.
+    function mmlTileUrl(layer) {
+      return `${MML_BASE}/${layer}/default/WGS84_Pseudo-Mercator/{z}/{y}/{x}.png?api-key=${MML_KEY}`;
+    }
+
+    // ─── Demo area: pine forest near Tikkakoski, Laukaa municipality ─────
+    // ~3 km NW of Tikkakoski village; typical Finnish spruce/pine terrain
+    // with gravel forest roads and small wetland pockets.
+    const DEMO_BOUNDS = {
+      minLat: 62.368,
+      maxLat: 62.398,
+      minLon: 25.595,
+      maxLon: 25.662
+    };
+
+    // ─── SVG icons ────────────────────────────────────────────────────────
     const ICONS = {
       drone: `<svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
         <circle cx="18" cy="18" r="16" stroke="#4fd87a" stroke-width="1.2" fill="rgba(79,216,122,0.15)"/>
@@ -436,21 +634,26 @@
         <circle cx="14" cy="14" r="11" stroke="#e8a838" stroke-width="1.2" fill="rgba(232,168,56,0.2)"/>
         <path d="M14 5 L16 11 L14 9 L12 11 Z" fill="#e8a838"/>
         <circle cx="14" cy="14" r="3" fill="#e8a838"/>
+      </svg>`,
+      false_alarm: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+        <path d="M16 3 L29 27 H3 Z" stroke="#e8a838" stroke-width="1.4" fill="rgba(232,168,56,0.15)"/>
+        <line x1="16" y1="12" x2="16" y2="20" stroke="#e8a838" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="16" cy="24" r="1.4" fill="#e8a838"/>
+        <line x1="7" y1="3" x2="25" y2="27" stroke="rgba(79,216,122,0.5)" stroke-width="1" stroke-linecap="round"/>
       </svg>`
     };
 
     const LABEL_TO_ICON = {
-      gunshot: "gunshot",
-      missile_launch: "missile_launch",
-      tank: "tank",
-      drone: "drone_hostile"
+      gunshot:       "gunshot",
+      missile_launch:"missile_launch",
+      tank:          "tank",
+      drone:         "drone_hostile"
     };
 
     function localizationUrls() {
       const urls = [];
-      try {
-        urls.push(new URL("../detection/output/localizations.json", location.href).href);
-      } catch (_) { /* ignore */ }
+      try { urls.push(new URL("../detection/output/localizations.json", location.href).href); }
+      catch (_) { /* ignore */ }
       if (location.protocol === "http:" || location.protocol === "https:") {
         const path = location.pathname;
         if (path.includes("/ui/")) {
@@ -464,30 +667,71 @@
     }
 
     const LEGEND_ITEMS = [
-      { key: "drone", label: "Sensor UAV" },
-      { key: "gunshot", label: "Gunfire (localized)" },
-      { key: "missile_launch", label: "Missile launch" },
-      { key: "tank", label: "Armor / tank" },
-      { key: "drone_hostile", label: "Hostile UAV" }
+      { key: "drone",          label: "Sensor UAV"          },
+      { key: "gunshot",        label: "Gunfire (localized)" },
+      { key: "missile_launch", label: "Missile launch"      },
+      { key: "tank",           label: "Armor / tank"        },
+      { key: "drone_hostile",  label: "Hostile UAV"         },
+      { key: "false_alarm",    label: "False alarm"         }
+    ];
+
+    // ─── Curated demo scenarios ───────────────────────────────────────────
+    // Five scenarios, each illustrating a distinct concept in the pipeline.
+    const DEMO_SCENARIOS = [
+      {
+        key:       "scenario_missile_mix.wav",
+        title:     "Missile Launch Detected",
+        purpose:   "High-confidence TDOA localization",
+        desc:      "Three UAVs triangulate a missile/UCAS launch via acoustic TDOA. CEP50 ≈ 16 m, GDOP 2.1 — geometry is good. ROE: RECON ordered.",
+        falseAlarm: false
+      },
+      {
+        key:       "scenario_tank_mix.wav",
+        title:     "Armor Contact — Tank Engine",
+        purpose:   "Optimal sensor geometry demonstration",
+        desc:      "Tank engine rumble localized with GDOP 1.6 — near-ideal triangulation geometry. Confidence ellipse is tight. ROE: RECON ordered.",
+        falseAlarm: false
+      },
+      {
+        key:       "scenario_gunshot_mix.wav",
+        title:     "Gunfire Localized",
+        purpose:   "Infantry contact via acoustic signature",
+        desc:      "Small-arms fire detected and triangulated. CEP50 ≈ 16 m — within engagement accuracy threshold. ROE: RECON ordered.",
+        falseAlarm: false
+      },
+      {
+        key:       "scenario_bird_preprocessed.wav",
+        title:     "FALSE ALARM — Wildlife Noise",
+        purpose:   "False positive: classifier error",
+        desc:      "Bird call misclassified as gunfire by the acoustic model. Localization runs but human review flags this as a false positive. No action.",
+        falseAlarm: true
+      },
+      {
+        key:       "scenario_gunshot_preprocessed.wav",
+        title:     "Poor Geometry — Hold Fire",
+        purpose:   "GDOP failure: insufficient fix quality",
+        desc:      "Only two drones in favorable angular positions. GDOP = 23.6, CEP50 = 246 m. Fix is too uncertain for action. ROE: HOLD FIRE.",
+        falseAlarm: false
+      }
     ];
 
     const PHASE_MS = {
-      transit: 4200,
-      listen: 2200,
-      localize: 2800,
-      hold: 5200
+      transit:  7000,
+      listen:   4500,
+      localize: 5500,
+      hold:     99999   // waits for manual NEXT
     };
 
     const PHASE_LABEL = {
-      transit: "UAV REPOSITIONING",
-      listen: "ACOUSTIC DETECTION",
+      transit:  "UAV REPOSITIONING",
+      listen:   "ACOUSTIC DETECTION",
       localize: "TDOA TRIANGULATION",
-      hold: "CONTACT CONFIRMED"
+      hold:     "CONTACT CONFIRMED — AWAITING ORDER"
     };
 
     const PHASE_ORDER = ["transit", "listen", "localize", "hold"];
 
-    // ─── State ───────────────────────────────────────────────────────────
+    // ─── State ────────────────────────────────────────────────────────────
     const state = {
       drones: [],
       targets: [],
@@ -497,7 +741,8 @@
       mode: "localize",
       localizations: [],
       frames: [],
-      geoBounds: null,
+      geoBounds: null,   // bounds used for normToPixel coordinate conversion
+      viewBounds: null,  // bounds currently committed to the Leaflet view
       playback: {
         index: 0,
         prevIndex: 0,
@@ -505,7 +750,9 @@
         phaseT: 0,
         paused: false,
         missionMs: 0,
-        localizeLogged: false
+        localizeLogged: false,
+        holdLogged: false,
+        introShown: false
       },
       ws: null,
       pingCount: 0,
@@ -513,121 +760,77 @@
       fps: 0
     };
 
-    const canvas = document.getElementById("mapCanvas");
-    const ctx = canvas.getContext("2d");
+    // ─── Canvas ───────────────────────────────────────────────────────────
+    const canvas      = document.getElementById("mapCanvas");
+    const ctx         = canvas.getContext("2d");
     const entityLayer = document.getElementById("entityLayer");
-    const forestSeed = 42;
 
-    // ─── Procedural Finnish forest (top-down) ───────────────────────────
-    function seededRandom(seed) {
-      const x = Math.sin(seed) * 10000;
-      return x - Math.floor(x);
+    // Logical CSS dimensions — updated by resize()
+    let canvasW = 1, canvasH = 1;
+
+    // ─── Leaflet map ──────────────────────────────────────────────────────
+    let leafletMap = null;
+
+    function initLeafletMap() {
+      leafletMap = L.map("leafletMap", {
+        zoomControl:       false,
+        attributionControl: false,
+        dragging:          false,
+        scrollWheelZoom:   false,
+        doubleClickZoom:   false,
+        touchZoom:         false,
+        boxZoom:           false,
+        keyboard:          false,
+        tap:               false,
+        inertia:           false
+      });
+
+      // Layer 1 — Topographic map (Maastokartta)
+      // Shows contours, roads, buildings, vegetation, water bodies
+      L.tileLayer(mmlTileUrl("maastokartta"), {
+        maxZoom: 16,
+        minZoom: 8
+      }).addTo(leafletMap);
+
+      // Layer 2 — Hillshade (Rinnevarjostus) at reduced opacity
+      // Adds terrain depth: ridges, valleys, slopes pop out clearly
+      L.tileLayer(mmlTileUrl("rinnevarjostus"), {
+        maxZoom: 16,
+        minZoom: 8,
+        opacity: 0.50
+      }).addTo(leafletMap);
+
+      // Start view on Tikkakoski demo area
+      syncMapView(DEMO_BOUNDS);
     }
 
-    let terrain = null;
-
-    function buildTerrain(w, h) {
-      const lakes = [
-        { x: 0.22, y: 0.35, rx: 0.09, ry: 0.06 },
-        { x: 0.68, y: 0.62, rx: 0.11, ry: 0.07 },
-        { x: 0.45, y: 0.78, rx: 0.05, ry: 0.04 }
-      ];
-      const trees = [];
-      for (let i = 0; i < 2200; i++) {
-        const r1 = seededRandom(forestSeed + i * 1.7);
-        const r2 = seededRandom(forestSeed + i * 2.3);
-        const r3 = seededRandom(forestSeed + i * 3.1);
-        const x = r1;
-        const y = r2;
-        let inLake = false;
-        for (const lake of lakes) {
-          const dx = (x - lake.x) / lake.rx;
-          const dy = (y - lake.y) / lake.ry;
-          if (dx * dx + dy * dy < 1) { inLake = true; break; }
-        }
-        if (!inLake) {
-          trees.push({
-            x, y,
-            r: 2 + r3 * 5,
-            shade: r3 > 0.6 ? "#1a3d28" : r3 > 0.3 ? "#245a36" : "#2d6b42"
-          });
-        }
-      }
-      const clearings = [
-        { x: 0.55, y: 0.28, r: 0.04 },
-        { x: 0.32, y: 0.58, r: 0.03 }
-      ];
-      return { lakes, trees, clearings, w, h };
+    // Snap the Leaflet view to the given geographic bounds.
+    // Called at scenario/phase transitions — not every frame.
+    function syncMapView(bounds) {
+      if (!leafletMap || !bounds) return;
+      state.viewBounds = bounds;
+      leafletMap.fitBounds(
+        [[bounds.minLat, bounds.minLon], [bounds.maxLat, bounds.maxLon]],
+        { animate: false, padding: [0, 0] }
+      );
     }
 
-    function drawTerrain() {
-      const { w, h, lakes, trees, clearings } = terrain;
-      const g = ctx.createLinearGradient(0, 0, w, h);
-      g.addColorStop(0, "#0d1a10");
-      g.addColorStop(0.5, "#122818");
-      g.addColorStop(1, "#0a150d");
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, w, h);
-
-      // Subtle grid (tactical)
-      ctx.strokeStyle = "rgba(79, 216, 122, 0.06)";
-      ctx.lineWidth = 1;
-      const step = 48;
-      for (let x = 0; x < w; x += step) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, h);
-        ctx.stroke();
+    // Convert a normalized (0-1) position — computed relative to state.geoBounds —
+    // into CSS pixel coordinates within the map container.
+    // Both canvas drawing and DOM entity positioning call this,
+    // so the tactical overlay always aligns with real geography.
+    function normToPixel(nx, ny) {
+      const b = state.geoBounds || DEMO_BOUNDS;
+      if (!leafletMap) {
+        return { x: nx * canvasW, y: ny * canvasH };  // fallback before Leaflet ready
       }
-      for (let y = 0; y < h; y += step) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(w, y);
-        ctx.stroke();
-      }
-
-      // Clearings (lighter moss)
-      for (const c of clearings) {
-        const grd = ctx.createRadialGradient(c.x * w, c.y * h, 0, c.x * w, c.y * h, c.r * w);
-        grd.addColorStop(0, "rgba(45, 90, 55, 0.5)");
-        grd.addColorStop(1, "transparent");
-        ctx.fillStyle = grd;
-        ctx.fillRect(0, 0, w, h);
-      }
-
-      // Lakes
-      for (const lake of lakes) {
-        ctx.save();
-        ctx.translate(lake.x * w, lake.y * h);
-        ctx.scale(lake.rx * w, lake.ry * h);
-        const lg = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
-        lg.addColorStop(0, "#2a5a72");
-        lg.addColorStop(0.7, "#1a3d52");
-        lg.addColorStop(1, "#122a38");
-        ctx.beginPath();
-        ctx.ellipse(0, 0, 1, 1, 0, 0, Math.PI * 2);
-        ctx.fillStyle = lg;
-        ctx.fill();
-        ctx.restore();
-      }
-
-      // Trees
-      for (const t of trees) {
-        ctx.beginPath();
-        ctx.arc(t.x * w, t.y * h, t.r, 0, Math.PI * 2);
-        ctx.fillStyle = t.shade;
-        ctx.fill();
-      }
-
-      // Vignette
-      const vig = ctx.createRadialGradient(w / 2, h / 2, w * 0.2, w / 2, h / 2, w * 0.75);
-      vig.addColorStop(0, "transparent");
-      vig.addColorStop(1, "rgba(0,0,0,0.55)");
-      ctx.fillStyle = vig;
-      ctx.fillRect(0, 0, w, h);
+      // Reverse latLonToNorm to recover lat/lon, then project via Leaflet
+      const lat = b.maxLat - ny * (b.maxLat - b.minLat);
+      const lon = b.minLon + nx * (b.maxLon - b.minLon);
+      return leafletMap.latLngToContainerPoint(L.latLng(lat, lon));
     }
 
-    // ─── Sonar / pulse waves ─────────────────────────────────────────────
+    // ─── Sonar pulses ─────────────────────────────────────────────────────
     const pulses = [];
 
     function emitPulse(nx, ny, color = "rgba(79, 216, 122, 0.5)") {
@@ -635,19 +838,12 @@
       state.pingCount++;
     }
 
+    // ─── Geo helpers ──────────────────────────────────────────────────────
     function computeGeoBounds(entry) {
-      const lats = [];
-      const lons = [];
-      for (const d of entry.drones_used) {
-        lats.push(d.lat);
-        lons.push(d.lon);
-      }
-      lats.push(entry.source.lat);
-      lons.push(entry.source.lon);
-      for (const p of entry.cloud_latlon || []) {
-        lats.push(p.lat);
-        lons.push(p.lon);
-      }
+      const lats = [], lons = [];
+      for (const d of entry.drones_used) { lats.push(d.lat); lons.push(d.lon); }
+      lats.push(entry.source.lat); lons.push(entry.source.lon);
+      for (const p of entry.cloud_latlon || []) { lats.push(p.lat); lons.push(p.lon); }
       const pad = 0.00012;
       return {
         minLat: Math.min(...lats) - pad,
@@ -661,9 +857,7 @@
       return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
     }
 
-    function lerp(a, b, t) {
-      return a + (b - a) * t;
-    }
+    function lerp(a, b, t) { return a + (b - a) * t; }
 
     function blendBounds(b1, b2, t) {
       return {
@@ -679,34 +873,43 @@
     }
 
     function buildFrames(entries) {
-      return entries.map((entry) => ({
-        entry,
-        shortName: shortScenarioName(entry.scenario),
-        bounds: computeGeoBounds(entry),
-        drones: entry.drones_used.map((d) => ({
-          id: d.drone_id,
-          lat: d.lat,
-          lon: d.lon
-        })),
-        target: {
-          id: `src-${entry.scenario}`,
-          lat: entry.source.lat,
-          lon: entry.source.lon,
-          type: LABEL_TO_ICON[entry.label] || "unknown",
-          label: entry.label_human || entry.label || "unknown"
-        },
-        cloudLatLon: entry.cloud_latlon || []
-      }));
+      return DEMO_SCENARIOS
+        .map((sc) => {
+          const entry = entries.find((e) => e.scenario === sc.key);
+          if (!entry) return null;
+          return {
+            entry,
+            meta: sc,
+            shortName: sc.key.replace(/^scenario_/, "").replace(/\.wav$/, ""),
+            bounds: computeGeoBounds(entry),
+            drones: entry.drones_used.map((d) => ({
+              id: d.drone_id, lat: d.lat, lon: d.lon
+            })),
+            target: {
+              id:    `src-${entry.scenario}`,
+              lat:   entry.source.lat,
+              lon:   entry.source.lon,
+              type:  sc.falseAlarm ? "false_alarm" : (LABEL_TO_ICON[entry.label] || "unknown"),
+              label: sc.falseAlarm ? "FALSE ALARM" : (entry.label_human || entry.label || "unknown")
+            },
+            cloudLatLon: entry.cloud_latlon || []
+          };
+        })
+        .filter(Boolean);
     }
 
-    function droneById(drones, id) {
-      return drones.find((d) => d.id === id);
+    function droneById(drones, id) { return drones.find((d) => d.id === id); }
+
+    function latLonToNorm(lat, lon, b) {
+      return {
+        x: (lon - b.minLon) / (b.maxLon - b.minLon),
+        y: 1 - (lat - b.minLat) / (b.maxLat - b.minLat)
+      };
     }
 
     function projectDrones(drones, bounds, patrolPhase = 0) {
       return drones.map((d, i) => {
-        let lat = d.lat;
-        let lon = d.lon;
+        let lat = d.lat, lon = d.lon;
         if (patrolPhase > 0) {
           const wobble = 0.00005;
           lat += Math.sin(patrolPhase * 1.4 + i * 2.1) * wobble;
@@ -727,87 +930,76 @@
     }
 
     function headingDeg(from, to) {
-      const dx = to.x - from.x;
-      const dy = to.y - from.y;
+      const dx = to.x - from.x, dy = to.y - from.y;
       if (Math.hypot(dx, dy) < 1e-5) return 0;
       return (Math.atan2(dx, -dy) * 180) / Math.PI;
     }
 
-    function latLonToNorm(lat, lon, b) {
-      const x = (lon - b.minLon) / (b.maxLon - b.minLon);
-      const y = 1 - (lat - b.minLat) / (b.maxLat - b.minLat);
-      return { x, y };
-    }
+    // ─── Canvas overlay drawing ───────────────────────────────────────────
 
     function drawConfidenceCloud() {
       if (!state.cloud || state.cloud.length < 3 || state.cloudAlpha <= 0) return;
-      const { w, h } = terrain;
       const a = state.cloudAlpha;
       ctx.beginPath();
       for (let i = 0; i < state.cloud.length; i++) {
-        const p = state.cloud[i];
-        const px = p.x * w;
-        const py = p.y * h;
-        if (i === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
+        const p  = state.cloud[i];
+        const pt = normToPixel(p.x, p.y);
+        if (i === 0) ctx.moveTo(pt.x, pt.y);
+        else         ctx.lineTo(pt.x, pt.y);
       }
       ctx.closePath();
-      ctx.fillStyle = `rgba(232, 92, 74, ${0.18 * a})`;
-      ctx.strokeStyle = `rgba(232, 92, 74, ${0.45 * a})`;
-      ctx.lineWidth = 1.5;
+      ctx.fillStyle   = `rgba(232, 92, 74, ${0.18 * a})`;
+      ctx.strokeStyle = `rgba(232, 92, 74, ${0.52 * a})`;
+      ctx.lineWidth   = 1.5;
       ctx.fill();
       ctx.stroke();
     }
 
     function drawPulses() {
-      const { w, h } = terrain;
-      const maxR = Math.min(w, h) * 0.35;
+      const maxR = Math.min(canvasW, canvasH) * 0.32;
       for (let i = pulses.length - 1; i >= 0; i--) {
         const p = pulses[i];
         p.t += 0.018;
-        if (p.t > 1) {
-          pulses.splice(i, 1);
-          continue;
-        }
-        const r = p.t * maxR;
+        if (p.t > 1) { pulses.splice(i, 1); continue; }
+        const pt    = normToPixel(p.nx, p.ny);
+        const r     = p.t * maxR;
         const alpha = (1 - p.t) * 0.45;
         ctx.beginPath();
-        ctx.arc(p.nx * w, p.ny * h, r, 0, Math.PI * 2);
+        ctx.arc(pt.x, pt.y, r, 0, Math.PI * 2);
         ctx.strokeStyle = p.color.replace(/[\d.]+\)$/, `${alpha})`);
-        ctx.lineWidth = 2 - p.t;
+        ctx.lineWidth   = 2 - p.t;
         ctx.stroke();
       }
     }
 
-    // ─── Entities DOM ────────────────────────────────────────────────────
+    // ─── Entities DOM ─────────────────────────────────────────────────────
     const entityEls = new Map();
 
     function upsertEntity(id, type, nx, ny, label, cssClass) {
       let el = entityEls.get(id);
       if (!el) {
         el = document.createElement("div");
-        el.className = `entity ${cssClass}`;
+        el.className  = `entity ${cssClass}`;
         el.dataset.id = id;
-        el.innerHTML = `${ICONS[type] || ICONS.unknown}<span class="label"></span>`;
+        el.innerHTML  = `${ICONS[type] || ICONS.unknown}<span class="label"></span>`;
         entityLayer.appendChild(el);
         entityEls.set(id, el);
       }
-      el.style.left = `${nx * 100}%`;
-      el.style.top = `${ny * 100}%`;
+      // Position using Leaflet's projection so icons sit on real geography
+      const pt = normToPixel(nx, ny);
+      el.style.left = `${pt.x}px`;
+      el.style.top  = `${pt.y}px`;
       el.querySelector(".label").textContent = label || id;
-      const svg = el.querySelector("svg");
-      if (cssClass === "drone" && type === "drone") {
+      if (cssClass === "drone") {
         const heading = el.dataset.heading || 0;
-        svg.style.transform = `rotate(${heading}deg)`;
+        const svg = el.querySelector("svg");
+        if (svg) svg.style.transform = `rotate(${heading}deg)`;
       }
     }
 
     function removeStaleEntities(ids) {
       for (const [id, el] of entityEls) {
-        if (!ids.has(id)) {
-          el.remove();
-          entityEls.delete(id);
-        }
+        if (!ids.has(id)) { el.remove(); entityEls.delete(id); }
       }
     }
 
@@ -823,89 +1015,136 @@
       for (const t of state.targets) {
         const id = `target-${t.id}`;
         active.add(id);
-        const known = ["tank", "soldier", "weapon", "vehicle", "gunshot", "missile_launch", "drone_hostile"];
-        const type = known.includes(t.type) ? t.type : "unknown";
+        const known = ["tank","soldier","weapon","vehicle","gunshot","missile_launch","drone_hostile"];
+        const type  = known.includes(t.type) ? t.type : "unknown";
         upsertEntity(id, type, t.x, t.y, t.label || type.toUpperCase(), "hostile");
       }
       removeStaleEntities(active);
-      document.getElementById("statDrones").textContent = state.drones.length;
+      document.getElementById("statDrones").textContent  = state.drones.length;
       document.getElementById("statHostile").textContent = state.targets.length;
-      document.getElementById("statPings").textContent = state.pingCount;
+      document.getElementById("statPings").textContent   = state.pingCount;
     }
 
-    // ─── WebSocket protocol ───────────────────────────────────────────────
-    // Expected JSON from Person 2 (map/perception) & Person 3 (tracking):
-    // {
-    //   "drones": [{ "id": "alpha", "x": 0.5, "y": 0.5, "heading": 45 }],
-    //   "targets": [{ "id": "t1", "type": "tank", "x": 0.7, "y": 0.3, "label": "T-72" }],
-    //   "sonar": [{ "x": 0.5, "y": 0.5 }]   // optional ping origins
-    // }
-    // Coordinates are normalized 0–1 (top-left origin).
-
+    // ─── WebSocket ────────────────────────────────────────────────────────
     function applyPayload(data) {
-      if (data.drones) state.drones = data.drones;
+      if (data.drones)  state.drones  = data.drones;
       if (data.targets) state.targets = data.targets;
-      if (data.cloud) state.cloud = data.cloud;
+      if (data.cloud)   state.cloud   = data.cloud;
       if (data.sonar) {
-        for (const s of data.sonar) {
+        for (const s of data.sonar)
           emitPulse(s.x, s.y, s.color || "rgba(79, 216, 122, 0.5)");
-        }
       }
       if (data.log) addLog(data.log.message, data.log.level || "ok");
     }
 
+    // ─── Timeline UI ──────────────────────────────────────────────────────
     function updateTimelineUI() {
-      const pb = state.playback;
+      const pb    = state.playback;
       const frame = state.frames[pb.index];
       if (!frame) return;
-      const dur = PHASE_MS[pb.phase];
-      const pct = dur > 0 ? Math.min(100, (pb.phaseT / dur) * 100) : 0;
+      const dur = pb.phase === "hold" ? 1 : PHASE_MS[pb.phase];
+      const pct = pb.phase === "hold" ? 100 : (dur > 0 ? Math.min(100, (pb.phaseT / dur) * 100) : 0);
       document.getElementById("timelinePhase").textContent =
-        `${PHASE_LABEL[pb.phase]} · event ${pb.index + 1}/${state.frames.length}`;
+        `${PHASE_LABEL[pb.phase]} · ${pb.index + 1}/${state.frames.length}`;
       document.getElementById("timelineEvent").textContent =
-        `${frame.shortName} → ${frame.target?.label || "unknown"}`;
+        frame.meta ? frame.meta.title : `${frame.shortName} → ${frame.target?.label || "unknown"}`;
       document.getElementById("timelineBar").style.width = `${pct}%`;
       const missionSec = Math.floor(pb.missionMs / 1000);
       const mm = String(Math.floor(missionSec / 60)).padStart(2, "0");
       const ss = String(missionSec % 60).padStart(2, "0");
+      const e  = frame.entry;
       document.getElementById("coords").textContent =
-        `T+${mm}:${ss} · ${frame.entry.label_human || frame.entry.label} · CEP50 ${frame.entry.cep50_m}m`;
+        `T+${mm}:${ss} · ${e.label_human || e.label} · CEP50 ${e.cep50_m}m`;
     }
 
     function logPlaybackEvent(frame, kind) {
       const e = frame.entry;
-      if (kind === "listen") {
+      if (kind === "listen")
         addLog(`Acoustic signal · ${frame.shortName} · listening…`, "warn");
-      } else if (kind === "localize") {
-        addLog(
-          `TDOA · ${e.label_human || e.label} · CEP50 ${e.cep50_m}m · ${frame.shortName}`,
-          "hostile"
-        );
+      else if (kind === "localize")
+        addLog(`TDOA · ${e.label_human || e.label} · CEP50 ${e.cep50_m}m · ${frame.shortName}`, "hostile");
+    }
+
+    // ─── Scenario intro helpers ───────────────────────────────────────────
+    function showScenarioIntro(frame, index, total) {
+      const el = document.getElementById("scenarioIntro");
+      const m  = frame.meta;
+      document.getElementById("siNum").textContent     = `SCENARIO ${index + 1} / ${total}`;
+      document.getElementById("siTitle").textContent   = m.title;
+      document.getElementById("siPurpose").textContent = m.purpose.toUpperCase();
+      document.getElementById("siDesc").textContent    = m.desc;
+      el.classList.remove("hidden");
+    }
+
+    function hideScenarioIntro() {
+      document.getElementById("scenarioIntro").classList.add("hidden");
+    }
+
+    // ─── ROE banner helpers ───────────────────────────────────────────────
+    function showRoeBanner(text, cls) {
+      const el = document.getElementById("roeBanner");
+      el.className = `visible ${cls}`;
+      el.textContent = text;
+    }
+
+    function hideRoeBanner() {
+      const el = document.getElementById("roeBanner");
+      el.className = "";
+      el.textContent = "";
+    }
+
+    // ─── NEXT button helpers ──────────────────────────────────────────────
+    function showNextButton() {
+      document.getElementById("btnNext").classList.add("visible");
+    }
+
+    function hideNextButton() {
+      document.getElementById("btnNext").classList.remove("visible");
+    }
+
+    // ─── Clear RECON/false-alarm CSS from all target entities ─────────────
+    function clearTargetStyles() {
+      for (const [, el] of entityEls) {
+        if (el.classList.contains("hostile")) {
+          el.classList.remove("recon-scanning", "false-alarm-marker");
+        }
       }
     }
 
     function advancePlaybackPhase() {
       const pb = state.playback;
-      const i = PHASE_ORDER.indexOf(pb.phase);
+      const i  = PHASE_ORDER.indexOf(pb.phase);
       if (i < PHASE_ORDER.length - 1) {
-        pb.phase = PHASE_ORDER[i + 1];
-        pb.phaseT = 0;
+        pb.phase   = PHASE_ORDER[i + 1];
+        pb.phaseT  = 0;
         pb.patrolT = 0;
         pb.localizeLogged = false;
+        pb.holdLogged     = false;
         const frame = state.frames[pb.index];
-        if (pb.phase === "listen") logPlaybackEvent(frame, "listen");
-        if (pb.phase === "localize") logPlaybackEvent(frame, "localize");
+        if (pb.phase === "listen")   { logPlaybackEvent(frame, "listen");   syncMapView(frame.bounds); }
+        if (pb.phase === "localize")   logPlaybackEvent(frame, "localize");
         return;
       }
-      pb.prevIndex = pb.index;
-      pb.index = (pb.index + 1) % state.frames.length;
-      pb.phase = "transit";
-      pb.phaseT = 0;
-      pb.patrolT = 0;
-      pb.cloudAlpha = 0;
+      // Advance to next scenario — clean up styling first
+      clearTargetStyles();
+      hideRoeBanner();
+      hideNextButton();
+      hideScenarioIntro();
+      pb.prevIndex      = pb.index;
+      pb.index          = (pb.index + 1) % state.frames.length;
+      pb.phase          = "transit";
+      pb.phaseT         = 0;
+      pb.patrolT        = 0;
       pb.localizeLogged = false;
-      state.targets = [];
-      state.cloud = [];
+      pb.holdLogged     = false;
+      pb.introShown     = false;
+      state.targets     = [];
+      state.cloud       = [];
+      state.cloudAlpha  = 0;
+      // Show intro card for incoming scenario, then sync map
+      const next = state.frames[pb.index];
+      showScenarioIntro(next, pb.index, state.frames.length);
+      syncMapView(next.bounds);
     }
 
     function tickPlayback(dt) {
@@ -913,113 +1152,141 @@
 
       entityLayer.classList.add("live-mission");
 
-      const pb = state.playback;
+      const pb  = state.playback;
       pb.missionMs += dt;
-      pb.phaseT += dt;
+      pb.phaseT    += dt;
 
-      const cur = state.frames[pb.index];
+      const cur  = state.frames[pb.index];
       const prev = state.frames[pb.prevIndex];
-      const dur = PHASE_MS[pb.phase];
-      const t = easeInOut(Math.min(1, pb.phaseT / dur));
+      const dur  = PHASE_MS[pb.phase];
+      const t    = easeInOut(Math.min(1, pb.phaseT / dur));
 
       if (pb.phase === "transit") {
-        const bounds = blendBounds(prev.bounds, cur.bounds, t);
-        state.geoBounds = bounds;
+        // Blend geoBounds for normToPixel; Leaflet view already set to cur.bounds
+        state.geoBounds  = blendBounds(prev.bounds, cur.bounds, t);
         state.cloudAlpha = 0;
-        state.cloud = [];
-        state.targets = [];
-        state.drones = cur.drones.map((d) => {
-          const from = droneById(prev.drones, d.id) || d;
-          const lat = lerp(from.lat, d.lat, t);
-          const lon = lerp(from.lon, d.lon, t);
-          const p = latLonToNorm(lat, lon, bounds);
-          const pFrom = latLonToNorm(from.lat, from.lon, bounds);
-          const pTo = latLonToNorm(d.lat, d.lon, bounds);
-          return {
-            id: d.id,
-            x: p.x,
-            y: p.y,
-            heading: headingDeg(pFrom, pTo)
-          };
+        state.cloud      = [];
+        state.targets    = [];
+        state.drones     = cur.drones.map((d) => {
+          const from  = droneById(prev.drones, d.id) || d;
+          const lat   = lerp(from.lat, d.lat, t);
+          const lon   = lerp(from.lon, d.lon, t);
+          const p     = latLonToNorm(lat, lon, state.geoBounds);
+          const pFrom = latLonToNorm(from.lat, from.lon, state.geoBounds);
+          const pTo   = latLonToNorm(d.lat,   d.lon,   state.geoBounds);
+          return { id: d.id, x: p.x, y: p.y, heading: headingDeg(pFrom, pTo) };
         });
-        if (Math.random() < 0.04) {
-          for (const d of state.drones) {
-            emitPulse(d.x, d.y, "rgba(79, 216, 122, 0.32)");
-          }
-        }
+        if (Math.random() < 0.04)
+          for (const d of state.drones) emitPulse(d.x, d.y, "rgba(79, 216, 122, 0.32)");
+
       } else if (pb.phase === "listen") {
-        state.geoBounds = cur.bounds;
-        pb.patrolT = (pb.patrolT || 0) + dt * 0.002;
+        state.geoBounds  = cur.bounds;
+        pb.patrolT       = (pb.patrolT || 0) + dt * 0.002;
         state.cloudAlpha = 0;
-        state.cloud = [];
-        state.targets = [];
-        const projected = projectDrones(cur.drones, cur.bounds, pb.patrolT);
-        state.drones = projected.map((d) => ({ id: d.id, x: d.x, y: d.y, heading: 0 }));
-        if (Math.random() < 0.07) {
-          for (const d of state.drones) {
-            emitPulse(d.x, d.y, "rgba(79, 216, 122, 0.42)");
-          }
-        }
+        state.cloud      = [];
+        state.targets    = [];
+        const projected  = projectDrones(cur.drones, cur.bounds, pb.patrolT);
+        state.drones     = projected.map((d) => ({ id: d.id, x: d.x, y: d.y, heading: 0 }));
+        if (Math.random() < 0.07)
+          for (const d of state.drones) emitPulse(d.x, d.y, "rgba(79, 216, 122, 0.42)");
+
       } else if (pb.phase === "localize") {
         state.geoBounds = cur.bounds;
         const projected = projectDrones(cur.drones, cur.bounds);
-        state.drones = projected.map((d) => ({ id: d.id, x: d.x, y: d.y, heading: 0 }));
-        state.cloud = projectCloud(cur.cloudLatLon, cur.bounds);
+        state.drones    = projected.map((d) => ({ id: d.id, x: d.x, y: d.y, heading: 0 }));
+        state.cloud     = projectCloud(cur.cloudLatLon, cur.bounds);
         state.cloudAlpha = easeInOut(t);
         if (t > 0.4) {
           state.targets = [projectTarget(cur.target, cur.bounds)];
           if (!pb.localizeLogged) {
             pb.localizeLogged = true;
-            for (const d of state.drones) {
-              emitPulse(d.x, d.y, "rgba(79, 216, 122, 0.35)");
-            }
+            for (const d of state.drones) emitPulse(d.x, d.y, "rgba(79, 216, 122, 0.35)");
             emitPulse(state.targets[0].x, state.targets[0].y, "rgba(232, 92, 74, 0.5)");
           }
         } else {
           state.targets = [];
         }
+
       } else if (pb.phase === "hold") {
-        state.geoBounds = cur.bounds;
-        const projected = projectDrones(cur.drones, cur.bounds);
-        state.drones = projected.map((d) => ({ id: d.id, x: d.x, y: d.y, heading: 0 }));
-        state.cloud = projectCloud(cur.cloudLatLon, cur.bounds);
+        state.geoBounds  = cur.bounds;
+        const projected  = projectDrones(cur.drones, cur.bounds);
+        state.drones     = projected.map((d) => ({ id: d.id, x: d.x, y: d.y, heading: 0 }));
+        state.cloud      = projectCloud(cur.cloudLatLon, cur.bounds);
         state.cloudAlpha = 1;
-        state.targets = [projectTarget(cur.target, cur.bounds)];
-        if (Math.random() < 0.02) {
-          emitPulse(state.targets[0].x, state.targets[0].y, "rgba(232, 92, 74, 0.35)");
+        state.targets    = [projectTarget(cur.target, cur.bounds)];
+
+        if (!pb.holdLogged) {
+          pb.holdLogged = true;
+          const e   = cur.entry;
+          const act = e.recommended_action || "HOLD";
+          const fa  = cur.meta.falseAlarm;
+
+          // Apply visual styling to the target entity
+          setTimeout(() => {
+            const tId = `target-${cur.target.id}`;
+            const tel = entityEls.get(tId);
+            if (tel) {
+              if (fa) {
+                tel.classList.add("false-alarm-marker");
+              } else if (act === "RECON") {
+                tel.classList.add("recon-scanning");
+              }
+            }
+          }, 200);
+
+          // ROE banner
+          if (fa) {
+            showRoeBanner("⚠ FALSE ALARM — NO ACTION TAKEN", "roe-false");
+            addLog(`FALSE ALARM · ${cur.shortName} · misclassification confirmed`, "warn");
+          } else if (act === "RECON") {
+            showRoeBanner(`▶ RECON ORDERED · ${e.label_human || e.label}`, "roe-recon");
+            addLog(`RECON · ${e.label_human || e.label} · CEP50 ${e.cep50_m}m · ${cur.shortName}`, "warn");
+          } else {
+            showRoeBanner(`✕ HOLD FIRE · CEP50 ${e.cep50_m}m — GEOMETRY INSUFFICIENT`, "roe-hold");
+            addLog(`HOLD · ${e.label_human || e.label} · CEP50 ${e.cep50_m}m · GDOP ${e.gdop} — fix too uncertain`, "hostile");
+          }
+
+          // Show NEXT button
+          showNextButton();
         }
+
+        if (Math.random() < 0.015)
+          emitPulse(state.targets[0].x, state.targets[0].y, "rgba(232, 92, 74, 0.25)");
+        // hold never auto-advances — waits for btnNext click
       }
 
       updateTimelineUI();
-
-      if (pb.phaseT >= dur) {
-        advancePlaybackPhase();
-      }
+      if (pb.phase !== "hold" && pb.phaseT >= dur) advancePlaybackPhase();
     }
 
     function startPlayback() {
       const n = state.frames.length;
       if (!n) return;
+      clearTargetStyles();
+      hideRoeBanner();
+      hideNextButton();
+      hideScenarioIntro();
       state.playback = {
-        index: 0,
-        prevIndex: n - 1,
-        phase: "transit",
-        phaseT: 0,
-        paused: false,
-        missionMs: 0,
-        localizeLogged: false
+        index: 0, prevIndex: n - 1,
+        phase: "transit", phaseT: 0,
+        paused: false, missionMs: 0,
+        localizeLogged: false, holdLogged: false, introShown: false
       };
       state.cloudAlpha = 0;
-      state.targets = [];
-      state.cloud = [];
+      state.targets    = [];
+      state.cloud      = [];
+      state.geoBounds  = state.frames[0].bounds;
+      syncMapView(state.frames[0].bounds);
+      // Show intro card for the first scenario
+      showScenarioIntro(state.frames[0], 0, n);
       updateTimelineUI();
-      addLog(`Live mission · ${n} events in sequence`, "ok");
+      addLog(`Mission · ${n} curated scenarios — press NEXT to advance`, "ok");
     }
 
     function setTimelineLoadError(msg) {
       document.getElementById("timelinePhase").textContent = "DATA NOT LOADED";
       document.getElementById("timelineEvent").textContent = msg;
-      document.getElementById("timelineBar").style.width = "0%";
+      document.getElementById("timelineBar").style.width   = "0%";
     }
 
     async function loadLocalizations() {
@@ -1032,38 +1299,29 @@
         return false;
       }
 
-      let data = null;
-      let usedUrl = "";
-      let lastErr = "";
-
+      let data = null, usedUrl = "", lastErr = "";
       try {
         for (const url of localizationUrls()) {
           try {
             const res = await fetch(url);
-            if (!res.ok) {
-              lastErr = `HTTP ${res.status} for ${url}`;
-              continue;
-            }
-            data = await res.json();
+            if (!res.ok) { lastErr = `HTTP ${res.status} for ${url}`; continue; }
+            data    = await res.json();
             usedUrl = url;
             break;
-          } catch (e) {
-            lastErr = `${url}: ${e.message}`;
-          }
+          } catch (e) { lastErr = `${url}: ${e.message}`; }
         }
 
         if (!data || !Array.isArray(data) || !data.length) {
-          const msg = lastErr || "localizations.json not found";
           setTimelineLoadError("Run: python3 -m http.server 8080");
-          addLog(`Load failed — ${msg}`, "warn");
+          addLog(`Load failed — ${lastErr || "localizations.json not found"}`, "warn");
           addLog("cd repo root, then: python3 -m http.server 8080", "warn");
           addLog("Open: http://localhost:8080/ui/index.html", "warn");
           return false;
         }
 
         state.localizations = data;
-        state.frames = buildFrames(data);
-        state.mode = "localize";
+        state.frames        = buildFrames(data);
+        state.mode          = "localize";
         document.getElementById("btnLocalize").classList.add("active");
         document.getElementById("btnDemo").classList.remove("active");
         startPlayback();
@@ -1080,15 +1338,14 @@
 
     function setMode(mode) {
       state.mode = mode;
-      document.getElementById("btnDemo").classList.toggle("active", mode === "demo");
+      document.getElementById("btnDemo").classList.toggle("active",     mode === "demo");
       document.getElementById("btnLocalize").classList.toggle("active", mode === "localize");
-      if (mode !== "ws" && state.ws) {
-        state.ws.close();
-        state.ws = null;
-      }
+      if (mode !== "ws" && state.ws) { state.ws.close(); state.ws = null; }
       if (mode === "demo") {
         setWsStatus(false, "DEMO");
-        state.cloud = [];
+        state.cloud     = [];
+        state.geoBounds = DEMO_BOUNDS;
+        syncMapView(DEMO_BOUNDS);
         entityLayer.classList.remove("live-mission");
       } else if (mode === "localize") {
         if (state.frames.length) startPlayback();
@@ -1098,43 +1355,25 @@
 
     function connectWs() {
       const url = document.getElementById("wsUrl").value.trim();
-      if (state.ws) {
-        state.ws.close();
-        state.ws = null;
-      }
+      if (state.ws) { state.ws.close(); state.ws = null; }
       setMode("ws");
       document.getElementById("btnDemo").classList.remove("active");
       document.getElementById("btnLocalize").classList.remove("active");
 
-      try {
-        state.ws = new WebSocket(url);
-      } catch (e) {
+      try { state.ws = new WebSocket(url); }
+      catch (e) {
         setWsStatus(false, "ERROR");
         addLog(`WebSocket failed: ${e.message}`, "warn");
         return;
       }
 
-      state.ws.onopen = () => {
-        setWsStatus(true, "LIVE");
-        addLog(`Connected to ${url}`, "ok");
-      };
-
+      state.ws.onopen    = () => { setWsStatus(true,  "LIVE");         addLog(`Connected to ${url}`, "ok"); };
       state.ws.onmessage = (ev) => {
-        try {
-          applyPayload(JSON.parse(ev.data));
-        } catch (e) {
-          addLog("Invalid JSON frame", "warn");
-        }
+        try   { applyPayload(JSON.parse(ev.data)); }
+        catch (e) { addLog("Invalid JSON frame", "warn"); }
       };
-
-      state.ws.onclose = () => {
-        setWsStatus(false, "DISCONNECTED");
-        addLog("WebSocket closed", "warn");
-      };
-
-      state.ws.onerror = () => {
-        setWsStatus(false, "ERROR");
-      };
+      state.ws.onclose   = () => { setWsStatus(false, "DISCONNECTED"); addLog("WebSocket closed",    "warn"); };
+      state.ws.onerror   = () => { setWsStatus(false, "ERROR"); };
     }
 
     function setWsStatus(ok, label) {
@@ -1142,43 +1381,40 @@
       document.getElementById("wsLabel").textContent = label;
     }
 
-    // ─── Demo simulation ─────────────────────────────────────────────────
+    // ─── Demo simulation — Tikkakoski forest sector ───────────────────────
     let demoT = 0;
 
     function runDemo(dt) {
+      if (!state.geoBounds) { state.geoBounds = DEMO_BOUNDS; syncMapView(DEMO_BOUNDS); }
+
       demoT += dt * 0.0004;
       const cx = 0.48 + Math.sin(demoT) * 0.12;
       const cy = 0.52 + Math.cos(demoT * 0.85) * 0.1;
 
-      state.drones = [
-        {
-          id: "RAVEN-1",
-          x: cx,
-          y: cy,
-          heading: (demoT * 80) % 360
-        }
-      ];
+      state.drones = [{ id: "RAVEN-1", x: cx, y: cy, heading: (demoT * 80) % 360 }];
 
       state.targets = [
-        { id: "H1", type: "tank", x: 0.62 + Math.sin(demoT * 0.3) * 0.02, y: 0.38, label: "ARMOR" },
-        { id: "H2", type: "soldier", x: 0.71, y: 0.55 + Math.cos(demoT * 0.5) * 0.03, label: "INF" },
-        { id: "H3", type: "weapon", x: 0.28, y: 0.48, label: "CACHE" },
-        { id: "H4", type: "vehicle", x: 0.55, y: 0.72, label: "TRUCK" }
+        { id: "H1", type: "tank",    x: 0.62 + Math.sin(demoT * 0.3) * 0.02, y: 0.38,                            label: "ARMOR" },
+        { id: "H2", type: "soldier", x: 0.71,                                 y: 0.55 + Math.cos(demoT * 0.5) * 0.03, label: "INF"   },
+        { id: "H3", type: "weapon",  x: 0.28,                                 y: 0.48,                            label: "CACHE" },
+        { id: "H4", type: "vehicle", x: 0.55,                                 y: 0.72,                            label: "TRUCK" }
       ];
 
-      if (Math.random() < 0.04) {
-        emitPulse(cx, cy);
-        addLog("Sonar sweep · sector clear", "ok");
-      }
-      if (Math.random() < 0.008) {
-        addLog("Hostile track updated · bearing " + Math.floor(Math.random() * 360) + "°", "hostile");
-      }
+      if (Math.random() < 0.04) { emitPulse(cx, cy); addLog("Sonar sweep · sector clear", "ok"); }
+      if (Math.random() < 0.008) addLog("Hostile track updated · bearing " + Math.floor(Math.random() * 360) + "°", "hostile");
+
+      // Real lat/lon coords from Tikkakoski bounds
+      const b   = DEMO_BOUNDS;
+      const lat = (b.maxLat - cy * (b.maxLat - b.minLat)).toFixed(4);
+      const lon = (b.minLon + cx * (b.maxLon - b.minLon)).toFixed(4);
+      document.getElementById("coords").textContent =
+        `LAT ${lat}°N · LON ${lon}°E · HDG ${Math.floor((demoT * 80) % 360)}°`;
     }
 
-    // ─── UI helpers ──────────────────────────────────────────────────────
+    // ─── UI helpers ───────────────────────────────────────────────────────
     function addLog(msg, level = "ok") {
       const log = document.getElementById("eventLog");
-      const el = document.createElement("div");
+      const el  = document.createElement("div");
       el.className = `entry ${level}`;
       const ts = new Date().toTimeString().slice(0, 8);
       el.textContent = `[${ts}] ${msg}`;
@@ -1198,64 +1434,61 @@
 
     function resize() {
       const wrap = canvas.parentElement;
-      const dpr = window.devicePixelRatio || 1;
-      const w = wrap.clientWidth;
-      const h = wrap.clientHeight;
-      canvas.width = w * dpr;
+      const dpr  = window.devicePixelRatio || 1;
+      const w    = wrap.clientWidth;
+      const h    = wrap.clientHeight;
+      canvas.width  = w * dpr;
       canvas.height = h * dpr;
-      canvas.style.width = w + "px";
+      canvas.style.width  = w + "px";
       canvas.style.height = h + "px";
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      terrain = buildTerrain(w, h);
+      canvasW = w;
+      canvasH = h;
+      if (leafletMap) {
+        leafletMap.invalidateSize({ animate: false });
+        // Re-apply fitBounds after resize (container dimensions changed)
+        const b = state.viewBounds || state.geoBounds || DEMO_BOUNDS;
+        syncMapView(b);
+      }
     }
 
-    // ─── Main loop ───────────────────────────────────────────────────────
+    // ─── Main loop ────────────────────────────────────────────────────────
     function frame(now) {
       const dt = now - state.lastFrame;
       state.lastFrame = now;
       state.fps = Math.round(1000 / dt);
       document.getElementById("statFps").textContent = state.fps;
 
-      if (state.mode === "demo") runDemo(dt);
+      if (state.mode === "demo")     runDemo(dt);
       if (state.mode === "localize") tickPlayback(dt);
 
-      drawTerrain();
+      // Clear the transparent canvas overlay each frame
+      // (terrain is now the real Leaflet map underneath)
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
       if (state.mode === "localize") drawConfidenceCloud();
       drawPulses();
 
-      if (state.mode === "demo" && state.drones[0] && Math.random() < 0.06) {
-        const d = state.drones[0];
-        emitPulse(d.x, d.y);
-      }
-
       renderEntities();
-
-      if (state.mode === "demo") {
-        const d = state.drones[0];
-        if (d) {
-          const lat = (62.41 + (d.y - 0.5) * 0.02).toFixed(3);
-          const lon = (25.75 + (d.x - 0.5) * 0.02).toFixed(3);
-          document.getElementById("coords").textContent =
-            `LAT ${lat}°N · LON ${lon}°E · ALT 42m · HDG ${Math.floor(d.heading || 0)}°`;
-        }
-      }
 
       requestAnimationFrame(frame);
     }
 
-    // ─── Init ──────────────────────────────────────────────────────────────
+    // ─── Init ─────────────────────────────────────────────────────────────
     buildLegend();
-    addLog("Tactical map ready", "ok");
+    addLog("Tactical map ready — MML Maastokartta + Rinnevarjostus", "ok");
     addLog("LOCALIZE: auto timeline from localizations.json", "ok");
 
     window.addEventListener("resize", resize);
     resize();
+
+    initLeafletMap();   // boots Leaflet + MML tile layers
     requestAnimationFrame(frame);
 
     document.getElementById("btnConnect").addEventListener("click", connectWs);
     document.getElementById("btnDemo").addEventListener("click", () => {
       setMode("demo");
-      addLog("Demo mode active", "ok");
+      addLog("Demo mode — Tikkakoski forest sector", "ok");
     });
     document.getElementById("btnLocalize").addEventListener("click", () => {
       setMode("localize");
@@ -1271,6 +1504,13 @@
     document.getElementById("btnRetry").addEventListener("click", () => {
       setMode("localize");
       loadLocalizations();
+    });
+
+    document.getElementById("btnNext").addEventListener("click", () => {
+      if (state.playback.phase === "hold") {
+        advancePlaybackPhase();
+        addLog("Advancing to next scenario…", "ok");
+      }
     });
 
     loadLocalizations();

@@ -15,4 +15,4 @@ Public entry points:
     python -m triangulation.viewer detection/output/localizations.json
 """
 
-__all__ = ["locate", "viewer"]
+__all__ = ["locate", "policy", "viewer"]

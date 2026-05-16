@@ -34,8 +34,23 @@ from typing import Iterable
 import numpy as np
 
 from .core import (C, ellipse_axes, ellipse_xy, localize, mc_confidence)
+from .jam import apply_jamming
+from .policy import decide as _policy_decide, priority as _policy_priority
 from .projection import (latlon_to_local, latlon_to_local_array,
                          local_to_latlon, local_to_latlon_array)
+
+
+def _mgrs_or_none(lat: float, lon: float) -> str | None:
+    """Convert WGS84 coordinates to an MGRS grid reference (10 m precision).
+
+    Returns ``None`` gracefully when the ``mgrs`` package is not installed.
+    """
+    try:
+        import mgrs  # optional dependency
+        m = mgrs.MGRS()
+        return str(m.toMGRS(lat, lon, MGRSPrecision=4))  # 4 = 10 m grid square
+    except Exception:
+        return None
 
 
 # Field name in the input JSON for per-drone position uncertainty. If the
@@ -120,6 +135,8 @@ def localize_scenario(group: list[dict], *,
                        mc_samples: int = 400,
                        confidence: float = 0.95,
                        cloud_format: str = "ellipse",
+                       jammed_drone_ids: set[str] | None = None,
+                       scenario_variant: str | None = None,
                        rng: np.random.Generator | None = None) -> dict:
     """Run the full pipeline on one scenario group; return an output dict."""
     rng = rng if rng is not None else np.random.default_rng(7)
@@ -169,9 +186,23 @@ def localize_scenario(group: list[dict], *,
     bearing, distance = _bearing_deg(estimate_xy,
                                       np.asarray(drone_positions[ref_id]))
 
+    label = group[0].get("label")
+    decision = _policy_decide(
+        cep50_m=cep50,
+        gdop=gdop,
+        label=label,
+        confidence=_confidence_score(cep50),
+    )
+    priority_score = _policy_priority(
+        label=label,
+        recommended_action=decision.action,
+        cep50_m=cep50,
+        severity=decision.severity,
+    )
+
     return {
         "scenario": Path(group[0].get("path", "")).name,
-        "label": group[0].get("label"),
+        "label": label,
         "label_human": group[0].get("label_human"),
         "event_timestamp_ns": int(group[0].get("timestamp_ns", 0)),
         "drone_ids": ids_sorted,
@@ -208,6 +239,19 @@ def localize_scenario(group: list[dict], *,
             "time_s_per_drone": [float(x) for x in sigma_t_s],
             "position_m_per_drone": [float(x) for x in sigma_p_m],
         },
+        # ROE policy fields (Session 1)
+        "recommended_action": decision.action,
+        "recommended_action_reason": decision.reason,
+        "recommended_action_severity": decision.severity,
+        "weapons_release_required": decision.weapons_release_required,
+        "source_mgrs": _mgrs_or_none(src_lat, src_lon),
+        "threat_priority": round(priority_score, 3),
+        # Jamming fields (Session 2) — null when not in a jammed variant
+        "scenario_variant": scenario_variant,
+        "jam_status_per_drone": (
+            {e["drone_id"]: e.get("jam_status", "clean") for e in group}
+            if jammed_drone_ids is not None else None
+        ),
     }
 
 
@@ -217,10 +261,27 @@ def run(events_path: Path, out_path: Path, *,
         confidence: float = 0.95,
         cloud_format: str = "ellipse",
         pretty: bool = False,
-        verbose: bool = True) -> list[dict]:
+        verbose: bool = True,
+        jam_drone: str | None = None,
+        jam_position_mult: float = 5.0,
+        jam_time_mult: float = 1.0,
+        jam_label: str = "gps_jammed",
+        variant_tag: str | None = None) -> list[dict]:
     """Top-level: read events, localise every relevant scenario, write JSON."""
     with open(events_path) as f:
         events: list[dict] = json.load(f)
+
+    # Apply jamming to the event list before grouping (if requested).
+    jammed_drone_ids: set[str] | None = None
+    if jam_drone is not None:
+        events = apply_jamming(
+            events,
+            target_drone_id=jam_drone,
+            pos_mult=jam_position_mult,
+            time_mult=jam_time_mult,
+            jam_label=jam_label,
+        )
+        jammed_drone_ids = {jam_drone}
 
     groups = _group_by_scenario(events)
     out: list[dict] = []
@@ -237,6 +298,8 @@ def run(events_path: Path, out_path: Path, *,
                 group, mc_samples=mc_samples,
                 confidence=confidence,
                 cloud_format=cloud_format,
+                jammed_drone_ids=jammed_drone_ids,
+                scenario_variant=variant_tag,
                 rng=rng,
             )
         except Exception as exc:  # pragma: no cover (defensive)
@@ -249,6 +312,11 @@ def run(events_path: Path, out_path: Path, *,
                   f"CEP50={entry['cep50_m']:6.2f}m "
                   f"zone={entry['zone_area_m2']:7.1f}m² "
                   f"gdop={entry['gdop']:5.2f}")
+
+    # Stamp priority_rank (0 = highest priority) across the whole list.
+    ranked = sorted(enumerate(out), key=lambda x: x[1]["threat_priority"], reverse=True)
+    for rank, (orig_idx, _) in enumerate(ranked):
+        out[orig_idx]["priority_rank"] = rank
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w") as f:
@@ -281,6 +349,17 @@ def _cli(argv: Iterable[str] | None = None) -> int:
                    default="ellipse")
     p.add_argument("--pretty", action="store_true")
     p.add_argument("--quiet", action="store_true")
+    # Jamming flags (Session 2)
+    p.add_argument("--jam-drone", default=None,
+                   help="drone_id to simulate GPS jamming on")
+    p.add_argument("--jam-position-mult", type=float, default=5.0,
+                   help="multiply position_error_m for the jammed drone (default 5.0)")
+    p.add_argument("--jam-time-mult", type=float, default=1.0,
+                   help="multiply time_prediction_error_ms for the jammed drone (default 1.0)")
+    p.add_argument("--jam-label", default="gps_jammed",
+                   help="jam_status string written for the affected drone (default 'gps_jammed')")
+    p.add_argument("--variant-tag", default=None,
+                   help="tag written to scenario_variant in every output entry (e.g. 'clean')")
     args = p.parse_args(argv)
 
     run(Path(args.inp), Path(args.out),
@@ -288,7 +367,12 @@ def _cli(argv: Iterable[str] | None = None) -> int:
         confidence=args.confidence,
         cloud_format=args.cloud_format,
         pretty=args.pretty,
-        verbose=not args.quiet)
+        verbose=not args.quiet,
+        jam_drone=args.jam_drone,
+        jam_position_mult=args.jam_position_mult,
+        jam_time_mult=args.jam_time_mult,
+        jam_label=args.jam_label,
+        variant_tag=args.variant_tag)
     return 0
 
 
