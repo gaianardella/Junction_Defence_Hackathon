@@ -1,0 +1,8 @@
+# ML pipeline: YAMNet embeddings + eval benchmark
+# Install in audio_env: pip install -r detection/requirements-ml.txt
+
+tensorflow>=2.12
+tensorflow-hub>=0.14
+# Optional stronger separation (eval only):
+# demucs>=4.0
+# torch>=2.0

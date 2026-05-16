@@ -1,0 +1,240 @@
+[
+  {
+    "path": "data/scenarios/scenario_bird_mix.wav",
+    "label": null,
+    "label_human": "Not relevant",
+    "relevant": false,
+    "timestamp_ns": 1778955219756062976,
+    "confidence": 0.0,
+    "window_counts": {
+      "tank": 49,
+      "gunshot": 3,
+      "drone": 4
+    },
+    "windows_total": 56,
+    "bearing": null,
+    "drone_id": "drone_1",
+    "toa_offset_ns": 0,
+    "time_prediction_error_us": 0.0,
+    "time_prediction_error_ms": 0.0,
+    "position_error_m": 0.0
+  },
+  {
+    "path": "data/scenarios/scenario_bird_preprocessed.wav",
+    "label": "gunshot",
+    "label_human": "Gunfire",
+    "relevant": true,
+    "timestamp_ns": 1778955220085600000,
+    "confidence": 0.05128205128205128,
+    "window_counts": {
+      "tank": 35,
+      "missile_launch": 1,
+      "drone": 1,
+      "gunshot": 2
+    },
+    "windows_total": 39,
+    "bearing": null,
+    "drone_id": "drone_1",
+    "toa_offset_ns": 0,
+    "time_prediction_error_us": 1.7,
+    "time_prediction_error_ms": 10.7,
+    "position_error_m": 13.3
+  },
+  {
+    "path": "data/scenarios/scenario_crickets_mix.wav",
+    "label": null,
+    "label_human": "Not relevant",
+    "relevant": false,
+    "timestamp_ns": 1778955220356108800,
+    "confidence": 0.0,
+    "window_counts": {
+      "drone": 1,
+      "tank": 4
+    },
+    "windows_total": 5,
+    "bearing": null,
+    "drone_id": "drone_1",
+    "toa_offset_ns": 0,
+    "time_prediction_error_us": 0.0,
+    "time_prediction_error_ms": 0.0,
+    "position_error_m": 0.0
+  },
+  {
+    "path": "data/scenarios/scenario_crickets_preprocessed.wav",
+    "label": null,
+    "label_human": "Not relevant",
+    "relevant": false,
+    "timestamp_ns": 1778955220499939840,
+    "confidence": 0.0,
+    "window_counts": {
+      "gunshot": 23,
+      "drone": 2
+    },
+    "windows_total": 25,
+    "bearing": null,
+    "drone_id": "drone_1",
+    "toa_offset_ns": 0,
+    "time_prediction_error_us": 0.0,
+    "time_prediction_error_ms": 0.0,
+    "position_error_m": 0.0
+  },
+  {
+    "path": "data/scenarios/scenario_dog_mix.wav",
+    "label": null,
+    "label_human": "Not relevant",
+    "relevant": false,
+    "timestamp_ns": 1778955211347279104,
+    "confidence": 0.0,
+    "window_counts": {
+      "tank": 50,
+      "missile_launch": 3,
+      "drone": 4
+    },
+    "windows_total": 57,
+    "bearing": null,
+    "drone_id": "drone_1",
+    "toa_offset_ns": 0,
+    "time_prediction_error_us": 0.0,
+    "time_prediction_error_ms": 0.0,
+    "position_error_m": 0.0
+  },
+  {
+    "path": "data/scenarios/scenario_dog_preprocessed.wav",
+    "label": "tank",
+    "label_human": "Tank engine",
+    "relevant": true,
+    "timestamp_ns": 1778955211510228224,
+    "confidence": 0.918918918918919,
+    "window_counts": {
+      "tank": 34,
+      "missile_launch": 2,
+      "gunshot": 1
+    },
+    "windows_total": 37,
+    "bearing": null,
+    "drone_id": "drone_1",
+    "toa_offset_ns": 0,
+    "time_prediction_error_us": 3.14,
+    "time_prediction_error_ms": 3.6,
+    "position_error_m": 10.6
+  },
+  {
+    "path": "data/scenarios/scenario_gunshot_mix.wav",
+    "label": "gunshot",
+    "label_human": "Gunfire",
+    "relevant": true,
+    "timestamp_ns": 1778955221149963776,
+    "confidence": 0.017543859649122806,
+    "window_counts": {
+      "tank": 49,
+      "missile_launch": 2,
+      "gunshot": 1,
+      "drone": 5
+    },
+    "windows_total": 57,
+    "bearing": null,
+    "drone_id": "drone_1",
+    "toa_offset_ns": 0,
+    "time_prediction_error_us": 2.66,
+    "time_prediction_error_ms": 10.4,
+    "position_error_m": 12.4
+  },
+  {
+    "path": "data/scenarios/scenario_gunshot_preprocessed.wav",
+    "label": "gunshot",
+    "label_human": "Gunfire",
+    "relevant": true,
+    "timestamp_ns": 1778955221444221952,
+    "confidence": 0.05555555555555555,
+    "window_counts": {
+      "tank": 33,
+      "missile_launch": 1,
+      "gunshot": 2
+    },
+    "windows_total": 36,
+    "bearing": null,
+    "drone_id": "drone_1",
+    "toa_offset_ns": 0,
+    "time_prediction_error_us": 3.38,
+    "time_prediction_error_ms": 4.9,
+    "position_error_m": 13.6
+  },
+  {
+    "path": "data/scenarios/scenario_missile_mix.wav",
+    "label": "missile_launch",
+    "label_human": "Missile / UCAS launch",
+    "relevant": true,
+    "timestamp_ns": 1778955221644845056,
+    "confidence": 0.06521739130434782,
+    "window_counts": {
+      "tank": 42,
+      "drone": 1,
+      "missile_launch": 3
+    },
+    "windows_total": 46,
+    "bearing": null,
+    "drone_id": "drone_1",
+    "toa_offset_ns": 0,
+    "time_prediction_error_us": 1.7,
+    "time_prediction_error_ms": 5.8,
+    "position_error_m": 14.4
+  },
+  {
+    "path": "data/scenarios/scenario_missile_preprocessed.wav",
+    "label": "missile_launch",
+    "label_human": "Missile / UCAS launch",
+    "relevant": true,
+    "timestamp_ns": 1778955221791073792,
+    "confidence": 0.19047619047619047,
+    "window_counts": {
+      "tank": 17,
+      "missile_launch": 4
+    },
+    "windows_total": 21,
+    "bearing": null,
+    "drone_id": "drone_1",
+    "toa_offset_ns": 0,
+    "time_prediction_error_us": 3.62,
+    "time_prediction_error_ms": 8.8,
+    "position_error_m": 14.2
+  },
+  {
+    "path": "data/scenarios/scenario_tank_mix.wav",
+    "label": "tank",
+    "label_human": "Tank engine",
+    "relevant": true,
+    "timestamp_ns": 1778955221963630848,
+    "confidence": 0.9661016949152542,
+    "window_counts": {
+      "tank": 57,
+      "drone": 2
+    },
+    "windows_total": 59,
+    "bearing": null,
+    "drone_id": "drone_1",
+    "toa_offset_ns": 0,
+    "time_prediction_error_us": 1.82,
+    "time_prediction_error_ms": 10.9,
+    "position_error_m": 10.5
+  },
+  {
+    "path": "data/scenarios/scenario_tank_preprocessed.wav",
+    "label": "tank",
+    "label_human": "Tank engine",
+    "relevant": true,
+    "timestamp_ns": 1778955222030369024,
+    "confidence": 0.9347826086956522,
+    "window_counts": {
+      "tank": 43,
+      "missile_launch": 2,
+      "drone": 1
+    },
+    "windows_total": 46,
+    "bearing": null,
+    "drone_id": "drone_1",
+    "toa_offset_ns": 0,
+    "time_prediction_error_us": 3.14,
+    "time_prediction_error_ms": 9.4,
+    "position_error_m": 8.2
+  }
+]

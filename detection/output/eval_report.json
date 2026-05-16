@@ -1,0 +1,148 @@
+{
+  "scenarios_dir": "/Volumes/Extreme SSD/Defence hackathon/Junction_Defence_Hackathon/data/scenarios",
+  "files": 6,
+  "methods": [
+    "heuristic",
+    "heuristic_denoise",
+    "embed",
+    "embed_denoise",
+    "embed_hpss"
+  ],
+  "summary": {
+    "heuristic": {
+      "accuracy": 1.0,
+      "correct": 6,
+      "total": 6
+    },
+    "heuristic_denoise": {
+      "accuracy": 0.5,
+      "correct": 3,
+      "total": 6
+    },
+    "embed": {
+      "accuracy": 0.16666666666666666,
+      "correct": 1,
+      "total": 6
+    },
+    "embed_denoise": {
+      "accuracy": 0.6666666666666666,
+      "correct": 4,
+      "total": 6
+    },
+    "embed_hpss": {
+      "accuracy": 0.16666666666666666,
+      "correct": 1,
+      "total": 6
+    }
+  },
+  "rows": [
+    {
+      "file": "scenario_bird_mix.wav",
+      "expected": null,
+      "predictions": {
+        "heuristic": null,
+        "heuristic_denoise": "gunshot",
+        "embed": "tank",
+        "embed_denoise": "gunshot",
+        "embed_hpss": "tank"
+      },
+      "correct": {
+        "heuristic": true,
+        "heuristic_denoise": false,
+        "embed": false,
+        "embed_denoise": false,
+        "embed_hpss": false
+      }
+    },
+    {
+      "file": "scenario_crickets_mix.wav",
+      "expected": null,
+      "predictions": {
+        "heuristic": null,
+        "heuristic_denoise": null,
+        "embed": "tank",
+        "embed_denoise": null,
+        "embed_hpss": "tank"
+      },
+      "correct": {
+        "heuristic": true,
+        "heuristic_denoise": true,
+        "embed": false,
+        "embed_denoise": true,
+        "embed_hpss": false
+      }
+    },
+    {
+      "file": "scenario_dog_mix.wav",
+      "expected": null,
+      "predictions": {
+        "heuristic": null,
+        "heuristic_denoise": "missile_launch",
+        "embed": "tank",
+        "embed_denoise": null,
+        "embed_hpss": "tank"
+      },
+      "correct": {
+        "heuristic": true,
+        "heuristic_denoise": false,
+        "embed": false,
+        "embed_denoise": true,
+        "embed_hpss": false
+      }
+    },
+    {
+      "file": "scenario_gunshot_mix.wav",
+      "expected": "gunshot",
+      "predictions": {
+        "heuristic": "gunshot",
+        "heuristic_denoise": "gunshot",
+        "embed": "tank",
+        "embed_denoise": "gunshot",
+        "embed_hpss": "tank"
+      },
+      "correct": {
+        "heuristic": true,
+        "heuristic_denoise": true,
+        "embed": false,
+        "embed_denoise": true,
+        "embed_hpss": false
+      }
+    },
+    {
+      "file": "scenario_missile_mix.wav",
+      "expected": "missile_launch",
+      "predictions": {
+        "heuristic": "missile_launch",
+        "heuristic_denoise": "missile_launch",
+        "embed": "tank",
+        "embed_denoise": "tank",
+        "embed_hpss": "tank"
+      },
+      "correct": {
+        "heuristic": true,
+        "heuristic_denoise": true,
+        "embed": false,
+        "embed_denoise": false,
+        "embed_hpss": false
+      }
+    },
+    {
+      "file": "scenario_tank_mix.wav",
+      "expected": "tank",
+      "predictions": {
+        "heuristic": "tank",
+        "heuristic_denoise": "missile_launch",
+        "embed": "tank",
+        "embed_denoise": "tank",
+        "embed_hpss": "tank"
+      },
+      "correct": {
+        "heuristic": true,
+        "heuristic_denoise": false,
+        "embed": true,
+        "embed_denoise": true,
+        "embed_hpss": true
+      }
+    }
+  ]
+}

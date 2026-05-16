@@ -1,0 +1,140 @@
+[
+  {
+    "path": "data/scenarios/scenario_bird_mix.wav",
+    "label": "gunshot",
+    "window_counts": {
+      "background": 28,
+      "tank": 2,
+      "gunshot": 5
+    },
+    "windows_total": 35,
+    "qualifying_military_windows": 7,
+    "clean_audio_path": "/Volumes/Extreme SSD/Defence hackathon/Junction_Defence_Hackathon/detection/output/ml_clean/scenario_bird_mix/clean.wav"
+  },
+  {
+    "path": "data/scenarios/scenario_bird_preprocessed.wav",
+    "label": "tank",
+    "window_counts": {
+      "background": 25,
+      "tank": 4,
+      "gunshot": 6
+    },
+    "windows_total": 35,
+    "qualifying_military_windows": 10,
+    "clean_audio_path": "/Volumes/Extreme SSD/Defence hackathon/Junction_Defence_Hackathon/detection/output/ml_clean/scenario_bird_preprocessed/clean.wav"
+  },
+  {
+    "path": "data/scenarios/scenario_crickets_mix.wav",
+    "label": null,
+    "window_counts": {
+      "background": 34,
+      "tank": 1
+    },
+    "windows_total": 35,
+    "qualifying_military_windows": 1,
+    "clean_audio_path": "/Volumes/Extreme SSD/Defence hackathon/Junction_Defence_Hackathon/detection/output/ml_clean/scenario_crickets_mix/clean.wav"
+  },
+  {
+    "path": "data/scenarios/scenario_crickets_preprocessed.wav",
+    "label": "tank",
+    "window_counts": {
+      "tank": 6,
+      "background": 27,
+      "gunshot": 2
+    },
+    "windows_total": 35,
+    "qualifying_military_windows": 8,
+    "clean_audio_path": "/Volumes/Extreme SSD/Defence hackathon/Junction_Defence_Hackathon/detection/output/ml_clean/scenario_crickets_preprocessed/clean.wav"
+  },
+  {
+    "path": "data/scenarios/scenario_dog_mix.wav",
+    "label": null,
+    "window_counts": {
+      "background": 33,
+      "tank": 1,
+      "gunshot": 1
+    },
+    "windows_total": 35,
+    "qualifying_military_windows": 2,
+    "clean_audio_path": "/Volumes/Extreme SSD/Defence hackathon/Junction_Defence_Hackathon/detection/output/ml_clean/scenario_dog_mix/clean.wav"
+  },
+  {
+    "path": "data/scenarios/scenario_dog_preprocessed.wav",
+    "label": null,
+    "window_counts": {
+      "background": 35
+    },
+    "windows_total": 35,
+    "qualifying_military_windows": 0,
+    "clean_audio_path": "/Volumes/Extreme SSD/Defence hackathon/Junction_Defence_Hackathon/detection/output/ml_clean/scenario_dog_preprocessed/clean.wav"
+  },
+  {
+    "path": "data/scenarios/scenario_gunshot_mix.wav",
+    "label": "gunshot",
+    "window_counts": {
+      "background": 29,
+      "tank": 2,
+      "gunshot": 4
+    },
+    "windows_total": 35,
+    "qualifying_military_windows": 6,
+    "clean_audio_path": "/Volumes/Extreme SSD/Defence hackathon/Junction_Defence_Hackathon/detection/output/ml_clean/scenario_gunshot_mix/clean.wav"
+  },
+  {
+    "path": "data/scenarios/scenario_gunshot_preprocessed.wav",
+    "label": "tank",
+    "window_counts": {
+      "background": 30,
+      "tank": 3,
+      "gunshot": 2
+    },
+    "windows_total": 35,
+    "qualifying_military_windows": 5,
+    "clean_audio_path": "/Volumes/Extreme SSD/Defence hackathon/Junction_Defence_Hackathon/detection/output/ml_clean/scenario_gunshot_preprocessed/clean.wav"
+  },
+  {
+    "path": "data/scenarios/scenario_missile_mix.wav",
+    "label": "tank",
+    "window_counts": {
+      "background": 30,
+      "tank": 4,
+      "gunshot": 1
+    },
+    "windows_total": 35,
+    "qualifying_military_windows": 5,
+    "clean_audio_path": "/Volumes/Extreme SSD/Defence hackathon/Junction_Defence_Hackathon/detection/output/ml_clean/scenario_missile_mix/clean.wav"
+  },
+  {
+    "path": "data/scenarios/scenario_missile_preprocessed.wav",
+    "label": "tank",
+    "window_counts": {
+      "background": 27,
+      "tank": 6,
+      "gunshot": 2
+    },
+    "windows_total": 35,
+    "qualifying_military_windows": 8,
+    "clean_audio_path": "/Volumes/Extreme SSD/Defence hackathon/Junction_Defence_Hackathon/detection/output/ml_clean/scenario_missile_preprocessed/clean.wav"
+  },
+  {
+    "path": "data/scenarios/scenario_tank_mix.wav",
+    "label": "tank",
+    "window_counts": {
+      "background": 27,
+      "tank": 8
+    },
+    "windows_total": 35,
+    "qualifying_military_windows": 8,
+    "clean_audio_path": "/Volumes/Extreme SSD/Defence hackathon/Junction_Defence_Hackathon/detection/output/ml_clean/scenario_tank_mix/clean.wav"
+  },
+  {
+    "path": "data/scenarios/scenario_tank_preprocessed.wav",
+    "label": null,
+    "window_counts": {
+      "background": 35
+    },
+    "windows_total": 35,
+    "qualifying_military_windows": 0,
+    "clean_audio_path": "/Volumes/Extreme SSD/Defence hackathon/Junction_Defence_Hackathon/detection/output/ml_clean/scenario_tank_preprocessed/clean.wav"
+  }
+]
