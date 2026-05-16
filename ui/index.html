@@ -85,6 +85,9 @@
       background: rgba(0, 0, 0, 0.3);
     }
 
+    /* WebSocket panel + CONNECT/DEMO — dev only (hidden on Render / public deploy) */
+    html:not(.dev-host) .ws-dev-only { display: none !important; }
+
     .status-dot {
       width: 8px;
       height: 8px;
@@ -1262,6 +1265,14 @@
   </style>
 </head>
 <body>
+  <script>
+    (function () {
+      const h = location.hostname;
+      const forceProd = new URLSearchParams(location.search).has("prod");
+      if (!forceProd && (h === "localhost" || h === "127.0.0.1"))
+        document.documentElement.classList.add("dev-host");
+    })();
+  </script>
   <div class="hud">
     <header>
       <div>
@@ -1275,7 +1286,7 @@
         <div class="mesh-strip-row2" id="bwRow2">TOTAL — · — saved · loading…</div>
       </div>
 
-      <div class="status-pill">
+      <div class="status-pill ws-dev-only">
         <div class="status-dot" id="wsStatus"></div>
         <span id="wsLabel">DISCONNECTED</span>
       </div>
@@ -1341,12 +1352,14 @@
         <div class="sb-stat" id="sbStat">Drag drones &amp; source to compute live fix</div>
       </div>
 
-      <h2 style="margin-top: 14px">WebSocket</h2>
-      <input type="text" id="wsUrl" value="ws://localhost:8765" placeholder="ws://host:port" />
-      <div class="btn-row">
-        <button type="button" id="btnConnect">CONNECT</button>
-        <button type="button" id="btnDemo">DEMO</button>
-        <button type="button" id="btnLocalize" class="active">LOCALIZE</button>
+      <div class="ws-dev-only" id="wsDevPanel">
+        <h2 style="margin-top: 14px">WebSocket</h2>
+        <input type="text" id="wsUrl" value="ws://localhost:8765" placeholder="ws://host:port" />
+        <div class="btn-row">
+          <button type="button" id="btnConnect">CONNECT</button>
+          <button type="button" id="btnDemo">DEMO</button>
+          <button type="button" id="btnLocalize" class="active">LOCALIZE</button>
+        </div>
       </div>
     </aside>
 
@@ -3897,9 +3910,9 @@
 
     loadLocalizations();
 
-    // ?ws=ws://192.168.1.10:8765 auto-connect
+    // ?ws=ws://192.168.1.10:8765 auto-connect (dev hosts only)
     const params = new URLSearchParams(location.search);
-    if (params.get("ws")) {
+    if (params.get("ws") && document.documentElement.classList.contains("dev-host")) {
       document.getElementById("wsUrl").value = params.get("ws");
       connectWs();
     }
