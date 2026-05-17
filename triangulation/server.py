@@ -39,6 +39,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from collections import OrderedDict
 from pathlib import Path
@@ -78,6 +79,12 @@ _UI_DIR          = _ROOT / "ui"
 _EVENTS_PATH     = _ROOT / "detection" / "output" / "events.json"
 _LOCS_PATH       = _ROOT / "detection" / "output" / "localizations.json"
 _DETECTION_DIR   = _ROOT / "detection" / "output"
+
+# Render free tier: health checks time out at 5s if the worker is in scipy MC.
+_ON_RENDER  = bool(os.environ.get("RENDER"))
+_LIVE_MC    = 60 if _ON_RENDER else 120
+_SWEEP_MC   = 40 if _ON_RENDER else 60
+_SWEEP_N    = 8 if _ON_RENDER else 16
 
 # HMAC-SHA256 truncated to 16 B is appended to every frame on the wire.
 _HMAC_SIZE = 16
@@ -162,7 +169,7 @@ def _recompute(group: list[dict],
     rng   = np.random.default_rng(7)
     entry = localize_scenario(
         group,
-        mc_samples=120,
+        mc_samples=_LIVE_MC,
         sigma_t_override_ms=sigma_t_ms,
         sigma_pos_override_m=sigma_pos_m,
         killed_drone_ids=killed_drone_ids,
@@ -173,6 +180,12 @@ def _recompute(group: list[dict],
 
 
 # ── Static file serving ───────────────────────────────────────────────────────
+
+@app.route("/health")
+def health():                                        # noqa: D103
+    """Fast liveness probe for Render (must respond in <5s under CPU load)."""
+    return "ok", 200
+
 
 @app.route("/")
 def index():                                         # noqa: D103
@@ -259,7 +272,7 @@ def api_sweep(scenario_id: str):
         abort(404)
 
     sigma_pos_m = request.args.get("sigma_pos_m", type=float)
-    sigmas_ms   = np.logspace(np.log10(0.001), np.log10(20.0), 16)
+    sigmas_ms   = np.logspace(np.log10(0.001), np.log10(20.0), _SWEEP_N)
 
     results = []
     rng = np.random.default_rng(7)
@@ -267,7 +280,7 @@ def api_sweep(scenario_id: str):
         try:
             entry = localize_scenario(
                 group,
-                mc_samples=60,
+                mc_samples=_SWEEP_MC,
                 sigma_t_override_ms=float(st),
                 sigma_pos_override_m=sigma_pos_m,
                 rng=rng,
