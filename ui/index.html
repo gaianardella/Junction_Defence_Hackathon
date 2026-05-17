@@ -2471,15 +2471,25 @@
     // ─── Camera feed helpers ──────────────────────────────────────────────
     const RECON_FEED_DEFAULT = "assets/recon-feed.jpg";
     const RECON_FEED_BY_SCENARIO = {
-      0: "assets/missile_launch_forest.png",   // scenario_missile_mix.wav
-      1: "assets/gunshot_tank_forest.png",     // scenario_tank_mix.wav
-      2: "assets/soldier_shooting_forest.png", // scenario_gunshot_mix.wav
-      3: "assets/bird_forest_large.png",       // scenario_bird_preprocessed.wav
-      4: "assets/forest_only.png",             // scenario_gunshot_preprocessed.wav
+      0: "assets/missile_launch_forest.jpg",   // scenario_missile_mix.wav
+      1: "assets/gunshot_tank_forest.jpg",     // scenario_tank_mix.wav
+      2: "assets/soldier_shooting_forest.jpg", // scenario_gunshot_mix.wav
+      3: "assets/bird_forest_large.jpg",       // scenario_bird_preprocessed.wav
+      4: "assets/forest_only.jpg",             // scenario_gunshot_preprocessed.wav
     };
 
     function reconFeedImageSrc(scenarioIndex) {
       return RECON_FEED_BY_SCENARIO[scenarioIndex] ?? RECON_FEED_DEFAULT;
+    }
+
+    function preloadReconFeedImages() {
+      const seen = new Set();
+      for (const url of [...Object.values(RECON_FEED_BY_SCENARIO), RECON_FEED_DEFAULT]) {
+        if (seen.has(url)) continue;
+        seen.add(url);
+        const img = new Image();
+        img.src = url;
+      }
     }
 
     function updateReconFeedImage(scenarioIndex) {
@@ -3904,6 +3914,7 @@
         state.mode          = "localize";
         document.getElementById("btnLocalize").classList.add("active");
         document.getElementById("btnDemo").classList.remove("active");
+        preloadReconFeedImages();
         startStepEngine();
         addLog(`Loaded ${data.length} events from ${usedUrl}`, "ok");
         setWsStatus(false, "LOCALIZE");

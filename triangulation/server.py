@@ -47,7 +47,7 @@ from pathlib import Path
 import numpy as np
 
 try:
-    from flask import Flask, abort, jsonify, request, send_from_directory
+    from flask import Flask, abort, jsonify, make_response, request, send_from_directory
 except ImportError as exc:  # pragma: no cover
     raise SystemExit(
         "Flask not installed. Run: pip install flask"
@@ -198,7 +198,10 @@ def static_ui(filename: str):                        # noqa: D103
     safe = (_UI_DIR / filename).resolve()
     if not str(safe).startswith(str(_UI_DIR.resolve())):
         abort(403)
-    return send_from_directory(str(_UI_DIR), filename)
+    resp = make_response(send_from_directory(str(_UI_DIR), filename))
+    if filename.startswith("assets/"):
+        resp.headers["Cache-Control"] = "public, max-age=86400, immutable"
+    return resp
 
 
 @app.route("/detection/output/<path:filename>")

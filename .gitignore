@@ -23,3 +23,8 @@ docs/
 # Pitch / promo video (not needed on Render — large clone)
 movie/
 pitch/movie/
+
+# Recon feed sources (optimized .jpg is served)
+ui/assets/*_forest.png
+ui/assets/bird_forest_large.png
+ui/assets/forest_only.png
