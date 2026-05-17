@@ -1,65 +1,210 @@
-# Junction Defence Hackathon
+# Triangle
 
-Tactical map (WebSocket demo) + audio detection pipeline for military sound events.
+GPS-denied acoustic TDOA triangulation for UAV swarms, with ROE decision support, compact mesh telemetry, and an operator live map.
 
-## Layout
+**Live demo:** https://triangle-demo.onrender.com  
+**Repository:** https://github.com/gaianardella/triangle-demo
 
-```
-Junction_Defence_Hackathon/
-├── ui/
-│   ├── index.html          # Tactical map UI
-│   └── mock_ws_server.py   # WebSocket demo server
-├── detection/
-│   ├── build_scenarios.py  # Generate UAV mix WAVs → data/scenarios/
-│   ├── detect_audio.py     # Classify audio → JSON
-│   └── output/
-│       └── events.json     # Detection output for integration
-├── data/
-│   ├── scenarios/          # Generated scenario WAVs
-│   └── samples/            # Source clips (gunshot, tank, drone, …)
-└── CREDITS.md
-```
+---
 
 ## Quick start
 
-### Map UI
-
 ```bash
-pip install websockets
-python ui/mock_ws_server.py
-# Open ui/index.html in the browser
+pip install -r requirements.txt
+python -m triangulation.server
 ```
 
-### Audio pipeline
+Open **http://localhost:5050/** in your browser.
+
+The server loads precomputed localizations and serves the UI + API. For regenerating `detection/output/localizations.json`, see [Audio pipeline](#audio-pipeline) below.
+
+---
+
+## UI operator guide
+
+Triangle’s console is a single-page map (Finnish forest sector). On load it enters **LOCALIZE** mode, loads five scenarios, turns **AUTO** on, and **starts scenario 1** automatically. You can switch scenarios or take manual control at any time.
+
+### Layout overview
+
+| Area | What it shows |
+|------|----------------|
+| **Header** | Title, mesh bandwidth strip (clickable) |
+| **Left panel** | Scenario cards, phase stepper, sandbox, phase label |
+| **Map** | Drones, threat, confidence cloud, ROE banner, recon camera feed |
+| **Bottom bar** | Phase controls (PREV / NEXT / AUTO / RESET) |
+| **Right panel** | σ sliders, live CEP50/GDOP/ROE readout, drone status, event log |
+| **Footer** | Drone/hostile counts, FPS |
+
+---
+
+### Scenario cards (left panel)
+
+Five cards — click any card to **switch scenario** and restart from PATROL with **AUTO** enabled.
+
+| # | Scenario | ROE chip | What it demonstrates |
+|---|----------|----------|----------------------|
+| 1 | Missile Launch Detected | RECON | UCAS/missile launch, good geometry |
+| 2 | Armor Contact — Tank Engine | RECON | Tight ellipse, low GDOP |
+| 3 | Gunfire Localized | RECON | Small-arms, engagement-grade CEP50 |
+| 4 | FALSE ALARM — Wildlife Noise | F/A | Bird misclassified; no engagement |
+| 5 | Poor Geometry — Hold Fire | HOLD | High GDOP / large CEP50 |
+
+Each card also has a **⊞** button (top-right of the card) to open that scenario directly in **Sandbox** (see below).
+
+---
+
+### Mission phases
+
+The mission runs through six phases (dots in the left stepper light up as you progress):
+
+1. **PATROL** — standby (skipped instantly when a scenario starts with AUTO on)
+2. **DETECT** — acoustic event, sonar rings, mesh tactical packet
+3. **LOCALIZE** — TDOA confidence cloud / ellipse on the map
+4. **DECIDE** — ROE banner (STRIKE / RECON / SEARCH / HOLD)
+5. **RESPOND** — recon drone, camera feed, or strike/search animation
+6. **COMPLETE** — scenario freezes; use **RESET** to replay
+
+The subtitle bar under the map describes the current phase in plain language.
+
+---
+
+### Phase controls (bottom of map)
+
+| Button | Action |
+|--------|--------|
+| **⏪ PREV** | Go back one phase (clears recon feed, ROE banner, respond animations as needed) |
+| **▶ NEXT** | Advance one phase; if an animation is running, snaps it to the end first |
+| **⏵ AUTO** | Toggle automatic phase advance (on by default; green when active). When on, phases progress on their own after each animation finishes |
+| **⟲ RESET** | Return to **PATROL** for the current scenario; **AUTO stays on** |
+
+At **COMPLETE**, AUTO turns off and the scenario stays frozen until you press **RESET** or pick another card.
+
+---
+
+### Keyboard shortcuts
+
+| Key | Action |
+|-----|--------|
+| **→** | Next phase (same as **NEXT**) |
+| **←** | Previous phase (same as **PREV**) |
+| **Space** | Toggle **AUTO** |
+| **R** | **RESET** current scenario |
+| **K** | Cycle “kill” state on listening drones (see Drone status) |
+| **Esc** | Exit **Sandbox** mode |
+
+Shortcuts are ignored while focus is in a text input.
+
+---
+
+### Mesh bandwidth strip (header, centre)
+
+Click the strip to open the **mesh vs JSON** popover:
+
+- Side-by-side **hex dump** of the last mesh frame vs equivalent JSON
+- Session totals and compression **% saved**
+- **↺ RESET COUNTERS** — zero the session byte counters
+
+Counters increment when tactical events fire at **DETECT** and localization summaries at **LOCALIZE**.
+
+---
+
+### Error parameters (right panel)
+
+Two sliders recompute the current scenario’s uncertainty **live** (calls the backend sweep API):
+
+| Slider | Range | Effect |
+|--------|-------|--------|
+| **σ_t — timing error** | 0.001 ms → 20 ms (log scale) | Timing jitter → CEP50, cloud size, GDOP |
+| **σ_pos — position error** | 0 → 50 m | Drone position uncertainty |
+
+Readout below the sliders shows **CEP50**, **Zone**, **GDOP**, and recommended **Action**. The mini chart plots σ_t vs CEP50 with the current operating point.
+
+---
+
+### Drone status (right panel, during LOCALIZE+)
+
+Appears once a scenario is running. **Pills** list each listening UAV ID:
+
+- **Click a pill** — mark that drone as killed (simulates asset loss)
+- **Click again** — restore it
+- **[K]** — cycle kills one drone at a time; press again when all are killed to restore all
+- **RESTORE ALL** — clear all kills
+
+Killing drones updates the fix via the API (bearing-only / insufficient sensors scenarios).
+
+---
+
+### Sandbox (left panel)
+
+**ENTER SANDBOX** — planning mode for the current (or ⊞-selected) scenario:
+
+- **Drag** amber source star and green drone icons on the map
+- Live **CEP50 / error / ROE** in the sandbox stat line (backend `/api/sandbox/localize`)
+- Banner: *“SANDBOX — drag drones & source · ESC to exit”*
+
+**EXIT SANDBOX** (or **Esc**) returns to the normal mission view.
+
+---
+
+### Map overlays (automatic)
+
+These are not buttons; they appear during the mission:
+
+| Element | When |
+|---------|------|
+| **Scenario intro card** | Brief title/purpose at scenario start (hidden when DETECT begins) |
+| **ROE banner** | DECIDE / RESPOND — colour by action (red hold, amber recon, green false alarm) |
+| **Recon camera feed** | RECON respond — still image when the recon UAV enters the red confidence cloud |
+| **Strike / search animations** | RESPOND for STRIKE or SEARCH ROE |
+| **Confidence cloud** | LOCALIZE onward (red ellipse or bearing wedge) |
+
+---
+
+### Event log (right panel)
+
+Scrollable timestamped messages: load status, phase changes, mesh events, telemetry lines, sandbox/API errors.
+
+---
+
+## Audio pipeline
 
 ```bash
-conda activate audio_env
-pip install librosa numpy scipy
-
-# 1) Build scenarios
+# Generate multi-UAV scenario WAVs
 python detection/build_scenarios.py --all
 
-# 2) Detect (+ writes detection/output/events.json by default)
+# Edge classifier → events.json
 python detection/detect_audio.py --folder data/scenarios
 
-# Or specify JSON path explicitly
-python detection/detect_audio.py --folder data/scenarios -o detection/output/events.json --json
+# Triangulation → localizations.json (optional if using committed output)
+python -m triangulation.locate --in detection/output/events.json \
+  --out detection/output/localizations.json --pretty
 ```
 
-`data/` lives at repo root; detection results go under `detection/output/`.
+See `detection/output/events.json` for detection payloads. ML embedding path: `detection/classify_embed.py --fit` then `detection/eval_scenarios.py`.
 
-## Detection classes
+---
 
-| `label` | Meaning |
-|---------|---------|
-| `gunshot` | Gunfire |
-| `missile_launch` | Missile / UCAS launch |
-| `drone` | UAV |
-| `tank` | Tank engine |
-| `null` / `relevant: false` | Not relevant (animals, background) |
+## Project layout
 
-See `detection/output/events.json` for the full payload (`drone_id`, `timestamp_ns`, `bearing`, …).
+```
+triangle-demo/
+├── ui/index.html              # Operator live map
+├── triangulation/server.py    # Flask app + static UI
+├── detection/                 # Audio classify + scenarios
+├── mesh/                      # Compact binary mesh frames
+├── detection/output/localizations.json
+├── render.yaml                # Render.com deploy
+└── SUBMISSION.md              # Hackathon description
+```
+
+---
 
 ## Architecture
 
-- **[Mesh Network Dependencies](docs/MESH_ARCHITECTURE.md)** — system flow diagram, mesh dependency table (data rate / latency / criticality), and graceful degradation matrix for GPS-denied / mesh-loss scenarios.
+- **[Mesh network](docs/MESH_ARCHITECTURE.md)** — frame formats, bandwidth model, degradation matrix
+
+---
+
+## Credits
+
+See `CREDITS.md`. Map tiles © Maanmittauslaitos (MML WMTS).
